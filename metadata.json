@@ -1,0 +1,7 @@
+{
+  "name": "Veye Media - Agentic AI Systems",
+  "description": "A systems-first, agentic AI-powered media intelligence platform for Veye Media, focusing on autonomous growth systems and the Velocity Sync Engine.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
