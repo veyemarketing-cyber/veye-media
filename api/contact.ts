@@ -1,23 +1,29 @@
 import { Resend } from 'resend';
 
-const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'vmccoy@veyemarketing.com';
-const FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL || 'Veye Media <onboarding@resend.dev>';
-
 export default async function handler(req: any, res: any) {
-  // Always handle GET safely (browser hits this)
+  // --- CORS HEADERS ---
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // --- HANDLE PREFLIGHT ---
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // --- BLOCK NON-POST ---
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Ensure env var exists BEFORE creating Resend client
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({
-      error: 'Missing RESEND_API_KEY in Vercel Environment Variables (Production).',
-    });
+    return res.status(500).json({ error: 'Missing RESEND_API_KEY' });
   }
+
+  const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'vmccoy@veyemarketing.com';
+  const FROM_EMAIL =
+    process.env.RESEND_FROM_EMAIL || 'Veye Media <onboarding@resend.dev>';
 
   try {
     const {
@@ -73,7 +79,7 @@ Page: ${page || 'unknown'}
 
     return res.status(200).json({ ok: true, id: data?.id });
   } catch (err) {
-    console.error('API /api/contact crashed:', err);
+    console.error('API /api/contact error:', err);
     return res.status(500).json({ error: 'Server error' });
   }
 }
