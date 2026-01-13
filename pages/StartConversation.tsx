@@ -40,4 +40,15 @@ const handleSubmit = async (e: React.FormEvent) => {
       return;
     }
 
-    setIsS
+    setIsSubmitting(false);
+    setIsSuccess(true);
+  } catch (error) {
+    console.error('StartConversation submit error:', error);
+
+    setIsSubmitting(false);
+    setErrors((prev) => ({
+      ...prev,
+      mandate: 'Network error. Please try again in a moment.',
+    }));
+  }
+};
