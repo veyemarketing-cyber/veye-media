@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Loader2, Activity, User, Bot, ArrowRight, Phone, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Page } from '../types';
+// import { Page } from '../types'; // (optional) remove if unused
 
 interface Message {
   role: 'user' | 'assistant';
@@ -59,11 +59,59 @@ type ChatApiResponse = {
   details?: string;
 };
 
+// Renders internal paths like /velocity-sync-engine as clickable links
+function renderAssistantContent(text: string) {
+  const s = String(text || "");
+
+  // Split on internal app paths like /velocity-sync-engine or /start-a-conversation
+  const parts = s.split(/(\/[a-z0-9\-\/]+)/gi);
+
+  return (
+    <>
+      {parts.map((part, idx) => {
+        const isPath = /^\/[a-z0-9\-\/]+$/i.test(part);
+
+        if (isPath) {
+          return (
+            <Link
+              key={idx}
+              to={part}
+              className="text-veye-blue underline font-bold hover:opacity-90"
+            >
+              {part}
+            </Link>
+          );
+        }
+
+        // Preserve line breaks in normal text
+        const lines = part.split("\n");
+        return (
+          <span key={idx}>
+            {lines.map((line, i) => (
+              <React.Fragment key={i}>
+                {line}
+                {i < lines.length - 1 ? <br /> : null}
+              </React.Fragment>
+            ))}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
 export const ChatAssistant: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  // ✅ Auto-open on page load
+  const [isOpen, setIsOpen] = useState(true);
+
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Welcome to Veye Media. I am the Veye Media site assistant. I can discuss our systems-first approach to growth. How can I assist your strategic inquiry today?' }
+    {
+      role: 'assistant',
+      content:
+        'Welcome to Veye Media. I am the Veye Media site assistant. I can discuss our systems-first approach to growth. How can I assist your inquiry today?'
+    }
   ]);
+
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -83,26 +131,26 @@ export const ChatAssistant: React.FC = () => {
     setMessages(prev => [...prev, { role: 'user', content: originalMessage }]);
     setIsLoading(true);
 
-    // Immediate Handoff Check
     const isHumanRequest = HUMAN_KEYWORDS.some(kw => userMessage.includes(kw));
     const isHighIntent = INTENT_KEYWORDS.some(kw => userMessage.includes(kw));
 
     if (isHumanRequest) {
-      // Immediate switch to handoff mode without AI delay for human requests
       setTimeout(() => {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: "Absolutely — we can connect you with a real person. Our team can dive deeper into your specific strategic requirements.",
-          isHandoff: true
-        }]);
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content:
+              "Absolutely — we can connect you with a real person. Our team can dive deeper into your specific strategic requirements.",
+            isHandoff: true
+          }
+        ]);
         setIsLoading(false);
       }, 500);
       return;
     }
 
     try {
-      // ✅ FIX: Browser should NOT call Gemini directly.
-      // Call the serverless API instead.
       const r = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,25 +176,31 @@ export const ChatAssistant: React.FC = () => {
         data.answer ??
         "I apologize, but I am unable to process that inquiry at this moment. Would you like to start a direct strategic conversation with our team?";
 
-      // Optional: show a small source label if returned
       const sourceLabel =
         Array.isArray(data.sources) && data.sources.length > 0
           ? `Knowledge ${data.sources[0]?.version || ''} ${data.sources[0]?.lastUpdated ? `(${data.sources[0].lastUpdated})` : ''}`.trim()
           : undefined;
 
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: assistantContent,
-        isHandoff: isHighIntent,
-        sourceLabel,
-      }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: assistantContent,
+          isHandoff: isHighIntent,
+          sourceLabel,
+        }
+      ]);
     } catch (error) {
       console.error("Assistant Error:", error);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "I encountered a synchronization error. For high-fidelity strategic discussions, please visit our 'Start a Conversation' page.",
-        isHandoff: true
-      }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content:
+            "I encountered a synchronization error. For high-fidelity strategic discussions, please visit our 'Start a Conversation' page.",
+          isHandoff: true
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -182,16 +236,16 @@ export const ChatAssistant: React.FC = () => {
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${m.role === 'assistant' ? 'bg-veye-blue text-white' : 'bg-slate-200 text-slate-600'}`}>
                   {m.role === 'assistant' ? <Bot size={16} /> : <User size={16} />}
                 </div>
+
                 <div className={`max-w-[85%] flex flex-col gap-2`}>
                   <div className={`p-4 rounded-2xl text-sm leading-relaxed font-medium shadow-sm ${
                     m.role === 'assistant'
                       ? 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
                       : 'bg-veye-navy text-white rounded-tr-none'
                   }`}>
-                    {m.content}
+                    {m.role === 'assistant' ? renderAssistantContent(m.content) : m.content}
                   </div>
 
-                  {/* Optional source label */}
                   {m.sourceLabel && m.role === 'assistant' && (
                     <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2">
                       {m.sourceLabel}
@@ -224,6 +278,7 @@ export const ChatAssistant: React.FC = () => {
                 </div>
               </div>
             ))}
+
             {isLoading && (
               <div className="flex gap-3">
                 <div className="w-8 h-8 rounded-full bg-veye-blue text-white flex items-center justify-center shrink-0">
