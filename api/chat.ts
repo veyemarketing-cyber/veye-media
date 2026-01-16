@@ -43,24 +43,46 @@ type Knowledge = {
 };
 
 /* =========================
-   Load Knowledge (Lazy)
+   Load Knowledge (FIXED FOR VERCEL)
 ========================= */
 let KNOWLEDGE_CACHE: Knowledge | null = null;
 
 function loadKnowledge(): Knowledge {
   if (KNOWLEDGE_CACHE) return KNOWLEDGE_CACHE;
 
-  const knowledgePath = path.join(__dirname, "knowledge.json");
-  const raw = JSON.parse(fs.readFileSync(knowledgePath, "utf8")) as Knowledge;
+  // Vercel serverless builds move files — try all common locations
+  const candidates = [
+    path.join(process.cwd(), "api", "knowledge.json"),
+    path.join(process.cwd(), "knowledge.json"),
+    path.join(__dirname, "knowledge.json"),
+  ];
 
-  if (!raw?.brand?.name) throw new Error("Knowledge missing: brand.name");
-  if (!raw?.assistant_policy?.fallback_message)
-    throw new Error("Knowledge missing: assistant_policy.fallback_message");
-  if (!Array.isArray(raw?.systems_we_build) || raw.systems_we_build.length === 0)
-    throw new Error("Knowledge missing: systems_we_build");
+  let lastErr: any = null;
 
-  KNOWLEDGE_CACHE = raw;
-  return raw;
+  for (const p of candidates) {
+    try {
+      if (!fs.existsSync(p)) continue;
+
+      const raw = JSON.parse(fs.readFileSync(p, "utf8")) as Knowledge;
+
+      if (!raw?.brand?.name) throw new Error("Knowledge missing: brand.name");
+      if (!raw?.assistant_policy?.fallback_message)
+        throw new Error("Knowledge missing: assistant_policy.fallback_message");
+      if (!Array.isArray(raw?.systems_we_build) || raw.systems_we_build.length === 0)
+        throw new Error("Knowledge missing: systems_we_build");
+
+      KNOWLEDGE_CACHE = raw;
+      return raw;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  throw new Error(
+    `knowledge.json not loadable. Tried: ${candidates.join(" | ")}. Last error: ${
+      lastErr?.message || String(lastErr)
+    }`
+  );
 }
 
 /* =========================
@@ -128,7 +150,6 @@ function buildSystemsAnswer(k: Knowledge): string {
 function findFaqAnswer(k: Knowledge, message: string): string | null {
   const q = norm(message);
   for (const item of k.faq || []) {
-    // simple contains match (good enough for today)
     if (item?.q && (norm(item.q) === q || q.includes(norm(item.q)))) {
       return String(item.a || "").trim() || null;
     }
@@ -137,15 +158,13 @@ function findFaqAnswer(k: Knowledge, message: string): string | null {
 }
 
 /* =========================
-   API Handler (Knowledge-only for stability)
+   API Handler (Knowledge-only, Stable)
 ========================= */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCors(res);
 
-  // Preflight support
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // IMPORTANT: return 200 w/ message to avoid frontend catch fallback loops
   if (req.method !== "POST") {
     return sendOk(res, "Method not allowed. Please use Start a Conversation.", {
       isHandoff: true,
@@ -162,84 +181,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return sendOk(res, "Please enter a question, or Start a Conversation.", {
         isHandoff: true,
         href: CANONICAL_PAGES.startConversation,
-        sources: [
-          {
-            type: "knowledge",
-            version: KNOWLEDGE.meta?.version,
-            lastUpdated: KNOWLEDGE.meta?.last_updated,
-          },
-        ],
       });
     }
 
-    // Fast path: systems
     if (includesAny(message, ["what systems do you build", "what do you build", "your systems"])) {
       return sendOk(res, buildSystemsAnswer(KNOWLEDGE), {
         isHandoff: false,
         href: CANONICAL_PAGES.frameworks,
-        sources: [
-          {
-            type: "knowledge",
-            version: KNOWLEDGE.meta?.version,
-            lastUpdated: KNOWLEDGE.meta?.last_updated,
-          },
-        ],
       });
     }
 
-    // FAQ match (if any)
     const faq = findFaqAnswer(KNOWLEDGE, message);
     if (faq) {
       return sendOk(res, `${faq}\n\nFull details: ${CANONICAL_PAGES.frameworks}`, {
         isHandoff: false,
         href: CANONICAL_PAGES.frameworks,
-        sources: [
-          {
-            type: "knowledge",
-            version: KNOWLEDGE.meta?.version,
-            lastUpdated: KNOWLEDGE.meta?.last_updated,
-          },
-        ],
       });
     }
 
-    // Handoff intent? Provide a short response + handoff CTA
     if (handoff.isHandoff) {
-      const template = (handoff as any).template
-        ? `\n\n${(handoff as any).template}`
-        : "";
       return sendOk(
         res,
-        `Absolutely — we can connect you with a real person. Start here: ${CANONICAL_PAGES.startConversation}${template}`,
-        {
-          isHandoff: true,
-          href: CANONICAL_PAGES.startConversation,
-          handoffReason: (handoff as any).reason,
-          sources: [
-            {
-              type: "knowledge",
-              version: KNOWLEDGE.meta?.version,
-              lastUpdated: KNOWLEDGE.meta?.last_updated,
-            },
-          ],
-        }
+        `Absolutely — we can connect you with a real person. Start here: ${CANONICAL_PAGES.startConversation}`,
+        { isHandoff: true, href: CANONICAL_PAGES.startConversation }
       );
     }
 
-    // Default fallback (knowledge-governed)
-    return sendOk(res, KNOWLEDGE.assistant_policy?.fallback_message || "Please use Start a Conversation.", {
-      isHandoff: true,
-      href: CANONICAL_PAGES.startConversation,
-      sources: [
-        {
-          type: "knowledge",
-          version: KNOWLEDGE.meta?.version,
-          lastUpdated: KNOWLEDGE.meta?.last_updated,
-        },
-      ],
-    });
-  } catch (err: any) {
-    // Still return 200 with compatibility fields so widget never falls back
+    return sendOk(
+      res,
+      KNOWLEDGE.assistant_policy?.fallback_message || "Please use Start a Conversation.",
+      { isHandoff: true, href: CANONICAL_PAGES.startConversation }
+    );
+  } catch {
     return sendOk(
       res,
       "System temporarily unavailable. Please visit our 'Start a Conversation' page.",
