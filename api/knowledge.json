@@ -1,0 +1,212 @@
+{
+  "meta": {
+    "version": "1.1",
+    "last_updated": "2026-01-15"
+  },
+  "brand": {
+    "name": "Veye Media",
+    "positioning_one_liner": "Intelligent over tools. Systems over services.",
+    "core_message": "We design and build connected business systems that align strategy, operations, data, and growth."
+  },
+  "assistant_policy": {
+    "grounding_rule": "Answer using only the canonical knowledge provided in this file.",
+    "fallback_message": "I don’t have that in my system knowledge yet—would you like me to add it?"
+  },
+  "systems_we_build": [
+    {
+      "name": "Velocity Sync Engine",
+      "outcomes": [
+        "Faster lead-to-revenue execution",
+        "A clear operating rhythm across marketing and sales",
+        "Reliable visibility into pipeline, performance, and next actions"
+      ],
+      "what_it_includes": [
+        "End-to-end lead-to-revenue flow mapping (from first touch to handoff)",
+        "Conversion path design with system-level checkpoints",
+        "KPI and reporting alignment (what we measure, why it matters, and who owns it)",
+        "Operating rhythm structure (cadence, reviews, and decision signals)"
+      ],
+      "what_it_is_not": [
+        "A single tool, dashboard, or platform",
+        "A one-time campaign or short-term tactic",
+        "Generic recommendations without a system structure"
+      ]
+    },
+    {
+      "name": "Start A Conversation System",
+      "outcomes": [
+        "Higher-intent lead capture with clear intent signals",
+        "Fewer dead-end inquiries and more qualified conversations",
+        "Confident routing to the right human next step when intent is high"
+      ],
+      "what_it_includes": [
+        "Structured intake (what the visitor needs, urgency, and contact method)",
+        "Qualification prompts that clarify fit and next steps",
+        "Routing rules that trigger human follow-up when intent is high",
+        "Consistency in how Veye Media is explained (systems-first language)"
+      ],
+      "what_it_is_not": [
+        "A live human operator",
+        "A promise of immediate response",
+        "A replacement for real sales or service conversations"
+      ]
+    },
+    {
+      "name": "Data Governance & Intelligence System",
+      "outcomes": [
+        "Trusted data for decisions across teams",
+        "Reduced reporting chaos and conflicting numbers",
+        "Clear definitions, accountability, and decision-ready visibility"
+      ],
+      "what_it_includes": [
+        "Measurement and event definition framework (what gets tracked and how it is interpreted)",
+        "Reporting and dashboard structure aligned to outcomes and ownership",
+        "Data quality practices (consistency checks, definitions, and governance routines)",
+        "A clear source-of-truth approach for performance reporting"
+      ],
+      "what_it_is_not": [
+        "A specific warehouse or implementation blueprint",
+        "A single dashboard tool or reporting subscription",
+        "Raw data without decision context"
+      ]
+    }
+  ],
+  "core_capabilities": {
+    "Strategy & Positioning": [
+      "Messaging clarity",
+      "Offer architecture",
+      "Go-to-market alignment"
+    ],
+    "Systems Design": [
+      "Process mapping",
+      "Automation planning",
+      "Operating rhythm design"
+    ],
+    "Measurement": [
+      "KPI definitions",
+      "Dashboard structure",
+      "Reporting cadence"
+    ]
+  },
+  "handoff_rules": {
+    "human_handoff_triggers": [
+      {
+        "name": "Live agent request",
+        "match_any": [
+          "live agent",
+          "talk to someone",
+          "human",
+          "real person",
+          "call you",
+          "phone call",
+          "speak to victor"
+        ],
+        "handoff_reason": "User requested a real person."
+      },
+      {
+        "name": "High intent commercial",
+        "match_any": [
+          "pricing",
+          "cost",
+          "proposal",
+          "retainer",
+          "hire you",
+          "estimate"
+        ],
+        "handoff_reason": "User is asking about commercial terms or next steps."
+      }
+    ],
+    "handoff_response_template": "To connect with our team, please use **Start a Conversation** and share your goal, timeline, and the best way to reach you."
+  },
+  "approved_language": {
+    "preferred_explanations": [
+      {
+        "topic": "What systems do you build?",
+        "answer": "Veye Media builds connected business systems that align strategy, operations, data, and growth—so execution is consistent and outcomes are measurable."
+      }
+    ]
+  },
+  "faq": [
+    {
+      "q": "Are you a marketing agency?",
+      "a": "We’re systems-first. Marketing is part of the outcome, but we focus on designing and building the operating system behind growth."
+    },
+    {
+      "q": "How do we start?",
+      "a": "Use Start a Conversation and tell us your goal, your current setup, and what you need the system to accomplish."
+    }
+  ]
+}
+"framework_catalog": {
+  "umbrella_system": "Velocity Sync Engine™",
+  "enterprise_model": "Enterprise Operating Framework",
+  "principles": [
+    "Systems over tools",
+    "Governance before automation",
+    "Human authority over AI",
+    "Explainable outcomes",
+    "Auditability and control"
+  ],
+  "frameworks": [
+    {
+      "name": "Website Experience & Conversion Framework",
+      "purpose": "Govern intent capture, decision paths, and conversion logic across digital properties.",
+      "outcomes": [
+        "Higher-intent engagement",
+        "Clear next-step routing",
+        "Reduced friction between interest and action"
+      ]
+    },
+    {
+      "name": "Social Media Marketing Framework",
+      "purpose": "Align social campaign planning, deployment, optimization, and measurement to business outcomes.",
+      "outcomes": [
+        "Consistent execution",
+        "Faster optimization cycles",
+        "Measurable contribution to growth"
+      ]
+    },
+    {
+      "name": "Content & Distribution Framework",
+      "purpose": "Ensure content creation and distribution supports defined business objectives.",
+      "outcomes": [
+        "Narrative consistency",
+        "Strategic reuse",
+        "Reduced content waste"
+      ]
+    },
+    {
+      "name": "Marketing Intelligence & Analytics Framework",
+      "purpose": "Define measurement truth and insight-to-action workflows.",
+      "outcomes": [
+        "Trusted data",
+        "Clear accountability",
+        "Improved decision-making"
+      ]
+    },
+    {
+      "name": "Revenue Operations Framework",
+      "purpose": "Align marketing, sales, and follow-up into a single operating rhythm.",
+      "outcomes": [
+        "Faster lead-to-revenue execution",
+        "Reduced pipeline leakage"
+      ]
+    },
+    {
+      "name": "Customer Intelligence Framework",
+      "purpose": "Translate customer behavior into actionable insight across the lifecycle.",
+      "outcomes": [
+        "Improved retention",
+        "Smarter prioritization"
+      ]
+    },
+    {
+      "name": "AI-Assisted SDR & Engagement Framework",
+      "purpose": "Support human-led engagement with governed, assistive intelligence.",
+      "outcomes": [
+        "Faster response times",
+        "Better-qualified conversations"
+      ]
+    }
+  ]
+}

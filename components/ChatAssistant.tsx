@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Loader2, Activity, User, Bot, ArrowRight, Phone, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { GoogleGenAI } from "@google/genai";
 import { Page } from '../types';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   isHandoff?: boolean;
+  sourceLabel?:string; //NEW: e.g., "Knowledge v1.1 (2026-01-15)"
 }
 
 const SYSTEM_INSTRUCTION = `You are the "Veye Media site assistant". 
