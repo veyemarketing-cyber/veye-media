@@ -135,78 +135,78 @@
       "q": "How do we start?",
       "a": "Use Start a Conversation and tell us your goal, your current setup, and what you need the system to accomplish."
     }
-  ]
-}
-"framework_catalog": {
-  "umbrella_system": "Velocity Sync Engine™",
-  "enterprise_model": "Enterprise Operating Framework",
-  "principles": [
-    "Systems over tools",
-    "Governance before automation",
-    "Human authority over AI",
-    "Explainable outcomes",
-    "Auditability and control"
   ],
-  "frameworks": [
-    {
-      "name": "Website Experience & Conversion Framework",
-      "purpose": "Govern intent capture, decision paths, and conversion logic across digital properties.",
-      "outcomes": [
-        "Higher-intent engagement",
-        "Clear next-step routing",
-        "Reduced friction between interest and action"
-      ]
-    },
-    {
-      "name": "Social Media Marketing Framework",
-      "purpose": "Align social campaign planning, deployment, optimization, and measurement to business outcomes.",
-      "outcomes": [
-        "Consistent execution",
-        "Faster optimization cycles",
-        "Measurable contribution to growth"
-      ]
-    },
-    {
-      "name": "Content & Distribution Framework",
-      "purpose": "Ensure content creation and distribution supports defined business objectives.",
-      "outcomes": [
-        "Narrative consistency",
-        "Strategic reuse",
-        "Reduced content waste"
-      ]
-    },
-    {
-      "name": "Marketing Intelligence & Analytics Framework",
-      "purpose": "Define measurement truth and insight-to-action workflows.",
-      "outcomes": [
-        "Trusted data",
-        "Clear accountability",
-        "Improved decision-making"
-      ]
-    },
-    {
-      "name": "Revenue Operations Framework",
-      "purpose": "Align marketing, sales, and follow-up into a single operating rhythm.",
-      "outcomes": [
-        "Faster lead-to-revenue execution",
-        "Reduced pipeline leakage"
-      ]
-    },
-    {
-      "name": "Customer Intelligence Framework",
-      "purpose": "Translate customer behavior into actionable insight across the lifecycle.",
-      "outcomes": [
-        "Improved retention",
-        "Smarter prioritization"
-      ]
-    },
-    {
-      "name": "AI-Assisted SDR & Engagement Framework",
-      "purpose": "Support human-led engagement with governed, assistive intelligence.",
-      "outcomes": [
-        "Faster response times",
-        "Better-qualified conversations"
-      ]
-    }
-  ]
+  "framework_catalog": {
+    "umbrella_system": "Velocity Sync Engine™",
+    "enterprise_model": "Enterprise Operating Framework",
+    "principles": [
+      "Systems over tools",
+      "Governance before automation",
+      "Human authority over AI",
+      "Explainable outcomes",
+      "Auditability and control"
+    ],
+    "frameworks": [
+      {
+        "name": "Website Experience & Conversion Framework",
+        "purpose": "Govern intent capture, decision paths, and conversion logic across digital properties.",
+        "outcomes": [
+          "Higher-intent engagement",
+          "Clear next-step routing",
+          "Reduced friction between interest and action"
+        ]
+      },
+      {
+        "name": "Social Media Marketing Framework",
+        "purpose": "Align social campaign planning, deployment, optimization, and measurement to business outcomes.",
+        "outcomes": [
+          "Consistent execution",
+          "Faster optimization cycles",
+          "Measurable contribution to growth"
+        ]
+      },
+      {
+        "name": "Content & Distribution Framework",
+        "purpose": "Ensure content creation and distribution supports defined business objectives.",
+        "outcomes": [
+          "Narrative consistency",
+          "Strategic reuse",
+          "Reduced content waste"
+        ]
+      },
+      {
+        "name": "Marketing Intelligence & Analytics Framework",
+        "purpose": "Define measurement truth and insight-to-action workflows.",
+        "outcomes": [
+          "Trusted data",
+          "Clear accountability",
+          "Improved decision-making"
+        ]
+      },
+      {
+        "name": "Revenue Operations Framework",
+        "purpose": "Align marketing, sales, and follow-up into a single operating rhythm.",
+        "outcomes": [
+          "Faster lead-to-revenue execution",
+          "Reduced pipeline leakage"
+        ]
+      },
+      {
+        "name": "Customer Intelligence Framework",
+        "purpose": "Translate customer behavior into actionable insight across the lifecycle.",
+        "outcomes": [
+          "Improved retention",
+          "Smarter prioritization"
+        ]
+      },
+      {
+        "name": "AI-Assisted SDR & Engagement Framework",
+        "purpose": "Support human-led engagement with governed, assistive intelligence.",
+        "outcomes": [
+          "Faster response times",
+          "Better-qualified conversations"
+        ]
+      }
+    ]
+  }
 }
