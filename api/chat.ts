@@ -118,7 +118,7 @@ function addLearnMore(answer: string, href: string): string {
 }
 
 /* =========================
-   RESPONSE GOVERNANCE (NEW)
+   RESPONSE GOVERNANCE
    - Hard sentence cap (<= 5)
    - Mandatory redirects for framework/system and contact/pricing intents
 ========================= */
@@ -200,7 +200,6 @@ function splitSentences(text: string): string[] {
     .trim();
   if (!cleaned) return [];
 
-  // Split on punctuation boundaries; "good enough" for chat
   const parts = cleaned.split(/(?<=[.!?])\s+/g).filter(Boolean);
   return parts.map((p) => p.trim()).filter(Boolean);
 }
@@ -210,7 +209,6 @@ function enforceMaxSentences(text: string, maxSentences = 5): string {
   if (s.length === 0) return "";
   if (s.length <= maxSentences) return s.join(" ").trim();
 
-  // Keep first 3 sentences (tighter than 5) and let redirect be the CTA.
   const keep = Math.min(3, maxSentences);
   return s.slice(0, keep).join(" ").trim();
 }
@@ -238,7 +236,6 @@ function ensureRedirectLine(text: string, url: string, label = "Full details"): 
 }
 
 function enforceResponseContract(opts: {
-  knowledge: Knowledge;
   message: string;
   answer: string;
   maxSentences?: number;
@@ -246,26 +243,20 @@ function enforceResponseContract(opts: {
   const { message, answer } = opts;
   const maxSentences = opts.maxSentences ?? 5;
 
-  // 1) Strip any existing links so we control CTA
   let out = stripExistingLinks(answer);
-
-  // 2) Hard sentence cap
   out = enforceMaxSentences(out, maxSentences);
 
-  // 3) Mandatory redirect for matching intents
   const redirect = findRedirectUrl(message, out);
   if (redirect.url) {
     out = ensureRedirectLine(out, redirect.url, redirect.label ?? "Full details");
   }
 
-  return out.replace(/\s+/g, " ").trim();
+  // SAFETY: never return empty (prevents UI default fallback)
+  return (out || answer).replace(/\s+/g, " ").trim();
 }
 
 /**
  * Short, intentional answer for “What systems do you build?”
- * - 2–4 sentences
- * - sends user to the canonical frameworks page
- * - avoids enumerating full lists unless asked
  */
 function buildSystemsAnswerBrief(k: Knowledge): string {
   const oneLiner =
@@ -274,7 +265,6 @@ function buildSystemsAnswerBrief(k: Knowledge): string {
     )?.answer ||
     "Veye Media builds connected business systems that align strategy, operations, data, and growth—so execution is consistent and outcomes are measurable.";
 
-  // Keep it short; no bullet list by default
   const extra =
     "Our core systems include Velocity Sync Engine™, Start a Conversation, and Data Governance & Intelligence—each designed to produce measurable outcomes.";
 
@@ -358,24 +348,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const KNOWLEDGE = loadKnowledge();
     const handoff = detectHandoff(KNOWLEDGE, message);
 
-    // Fast path: “What systems do you build?” (brief + link)
+    const sources = [
+      { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
+    ];
+
+    // Fast path: “What systems do you build?”
     if (includesAny(message, ["what systems do you build", "what do you build", "your systems"])) {
       const raw = buildSystemsAnswerBrief(KNOWLEDGE);
-      const governed = enforceResponseContract({
-        knowledge: KNOWLEDGE,
-        message,
-        answer: raw,
-        maxSentences: 5,
-      });
+
+      // If you want “longer today”, comment the next line and set final = raw
+      const final = enforceResponseContract({ message, answer: raw, maxSentences: 5 });
 
       return res.status(200).json({
         ok: true,
-        answer: governed,
+        answer: final,
+        reply: final, // <-- IMPORTANT: keeps frontend from falling back to default
         isHandoff: handoff.isHandoff,
         handoffReason: (handoff as any).reason,
-        sources: [
-          { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
-        ],
+        sources,
       });
     }
 
@@ -387,25 +377,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         CANONICAL_PAGES.startConversation
       );
 
-      const governed = enforceResponseContract({
-        knowledge: KNOWLEDGE,
-        message,
-        answer: raw,
-        maxSentences: 5,
-      });
+      const final = enforceResponseContract({ message, answer: raw, maxSentences: 5 });
 
       return res.status(200).json({
         ok: true,
-        answer: governed,
+        answer: final,
+        reply: final, // <-- IMPORTANT
         isHandoff: handoff.isHandoff,
         handoffReason: (handoff as any).reason,
-        sources: [
-          { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
-        ],
+        sources,
       });
     }
 
-    // Gemini (brief by instruction)
+    // Gemini
     const ai = new GoogleGenAI({ apiKey });
 
     const response = await withTimeout(
@@ -424,30 +408,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       KNOWLEDGE.assistant_policy?.fallback_message ||
       "I don’t have that in my system knowledge yet—would you like me to add it?";
 
-    let answer = response.text || fallback;
+    const raw = response.text || fallback;
 
-    // If handoff triggered, append template (optional)
     const withHandoff =
       handoff.isHandoff && (handoff as any).template
-        ? `${answer}\n\n${(handoff as any).template}`
-        : answer;
+        ? `${raw}\n\n${(handoff as any).template}`
+        : raw;
 
-    // FINAL: enforce brevity + mandatory link-out (this is the fix)
-    const finalAnswer = enforceResponseContract({
-      knowledge: KNOWLEDGE,
-      message,
-      answer: withHandoff,
-      maxSentences: 5,
-    });
+    // If you want “longer today”, set final = withHandoff
+    const final = enforceResponseContract({ message, answer: withHandoff, maxSentences: 5 });
 
     return res.status(200).json({
       ok: true,
-      answer: finalAnswer,
+      answer: final,
+      reply: final, // <-- IMPORTANT
       isHandoff: handoff.isHandoff,
       handoffReason: (handoff as any).reason,
-      sources: [
-        { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
-      ],
+      sources,
     });
   } catch (err: any) {
     console.error("api/chat error:", err);
