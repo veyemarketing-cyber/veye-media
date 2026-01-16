@@ -29,9 +29,7 @@ type Knowledge = {
   assistant_policy?: { fallback_message?: string };
   systems_we_build?: Array<{ name: string }>;
   faq?: Array<{ q: string; a: string }>;
-  approved_language?: {
-    preferred_explanations?: Array<{ topic: string; answer: string }>;
-  };
+  approved_language?: { preferred_explanations?: Array<{ topic: string; answer: string }> };
   handoff_rules?: {
     human_handoff_triggers?: Array<{
       name: string;
@@ -41,49 +39,6 @@ type Knowledge = {
     handoff_response_template?: string;
   };
 };
-
-/* =========================
-   Load Knowledge (FIXED FOR VERCEL)
-========================= */
-let KNOWLEDGE_CACHE: Knowledge | null = null;
-
-function loadKnowledge(): Knowledge {
-  if (KNOWLEDGE_CACHE) return KNOWLEDGE_CACHE;
-
-  // Vercel serverless builds move files — try all common locations
-  const candidates = [
-    path.join(process.cwd(), "api", "knowledge.json"),
-    path.join(process.cwd(), "knowledge.json"),
-    path.join(__dirname, "knowledge.json"),
-  ];
-
-  let lastErr: any = null;
-
-  for (const p of candidates) {
-    try {
-      if (!fs.existsSync(p)) continue;
-
-      const raw = JSON.parse(fs.readFileSync(p, "utf8")) as Knowledge;
-
-      if (!raw?.brand?.name) throw new Error("Knowledge missing: brand.name");
-      if (!raw?.assistant_policy?.fallback_message)
-        throw new Error("Knowledge missing: assistant_policy.fallback_message");
-      if (!Array.isArray(raw?.systems_we_build) || raw.systems_we_build.length === 0)
-        throw new Error("Knowledge missing: systems_we_build");
-
-      KNOWLEDGE_CACHE = raw;
-      return raw;
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-
-  throw new Error(
-    `knowledge.json not loadable. Tried: ${candidates.join(" | ")}. Last error: ${
-      lastErr?.message || String(lastErr)
-    }`
-  );
-}
 
 /* =========================
    Helpers
@@ -115,6 +70,63 @@ function sendOk(res: VercelResponse, text: string, extra: Record<string, any> = 
     message: t,
     content: t,
   });
+}
+
+/* =========================
+   Knowledge Load (with runtime diagnostics)
+========================= */
+let KNOWLEDGE_CACHE: Knowledge | null = null;
+
+function loadKnowledgeWithDebug(): {
+  knowledge: Knowledge | null;
+  debug: {
+    cwd: string;
+    __dirname: string;
+    candidates: string[];
+    exists: Record<string, boolean>;
+    lastError?: string;
+  };
+} {
+  const candidates = [
+    path.join(process.cwd(), "api", "knowledge.json"),
+    path.join(process.cwd(), "knowledge.json"),
+    path.join(__dirname, "knowledge.json"),
+  ];
+
+  const exists: Record<string, boolean> = {};
+  for (const p of candidates) exists[p] = fs.existsSync(p);
+
+  const debug = {
+    cwd: process.cwd(),
+    __dirname,
+    candidates,
+    exists,
+    lastError: undefined as string | undefined,
+  };
+
+  if (KNOWLEDGE_CACHE) return { knowledge: KNOWLEDGE_CACHE, debug };
+
+  for (const p of candidates) {
+    try {
+      if (!fs.existsSync(p)) continue;
+
+      const raw = JSON.parse(fs.readFileSync(p, "utf8")) as Knowledge;
+
+      if (!raw?.brand?.name) throw new Error("Knowledge missing: brand.name");
+      if (!raw?.assistant_policy?.fallback_message)
+        throw new Error("Knowledge missing: assistant_policy.fallback_message");
+      if (!Array.isArray(raw?.systems_we_build) || raw.systems_we_build.length === 0)
+        throw new Error("Knowledge missing: systems_we_build");
+
+      KNOWLEDGE_CACHE = raw;
+      return { knowledge: raw, debug };
+    } catch (e: any) {
+      debug.lastError = String(e?.message || e);
+    }
+  }
+
+  debug.lastError = debug.lastError || "knowledge.json not found in any candidate path";
+  return { knowledge: null, debug };
 }
 
 function detectHandoff(k: Knowledge, message: string) {
@@ -158,7 +170,7 @@ function findFaqAnswer(k: Knowledge, message: string): string | null {
 }
 
 /* =========================
-   API Handler (Knowledge-only, Stable)
+   API Handler (Knowledge-only, debug on failure)
 ========================= */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCors(res);
@@ -174,49 +186,87 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const message = String(req.body?.message || "").trim();
-    const KNOWLEDGE = loadKnowledge();
+
+    const { knowledge: KNOWLEDGE, debug } = loadKnowledgeWithDebug();
+    if (!KNOWLEDGE) {
+      // ✅ critical: return debug so we can fix file placement in one shot
+      return sendOk(
+        res,
+        "System temporarily unavailable. Please visit our 'Start a Conversation' page.",
+        { isHandoff: true, href: CANONICAL_PAGES.startConversation, debug }
+      );
+    }
+
     const handoff = detectHandoff(KNOWLEDGE, message);
 
     if (!message) {
       return sendOk(res, "Please enter a question, or Start a Conversation.", {
         isHandoff: true,
         href: CANONICAL_PAGES.startConversation,
+        sources: [
+          { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
+        ],
       });
     }
 
+    // Fast path: systems
     if (includesAny(message, ["what systems do you build", "what do you build", "your systems"])) {
       return sendOk(res, buildSystemsAnswer(KNOWLEDGE), {
         isHandoff: false,
         href: CANONICAL_PAGES.frameworks,
+        sources: [
+          { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
+        ],
       });
     }
 
+    // FAQ match (if any)
     const faq = findFaqAnswer(KNOWLEDGE, message);
     if (faq) {
       return sendOk(res, `${faq}\n\nFull details: ${CANONICAL_PAGES.frameworks}`, {
         isHandoff: false,
         href: CANONICAL_PAGES.frameworks,
+        sources: [
+          { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
+        ],
       });
     }
 
+    // Handoff intent?
     if (handoff.isHandoff) {
+      const template = (handoff as any).template ? `\n\n${(handoff as any).template}` : "";
       return sendOk(
         res,
-        `Absolutely — we can connect you with a real person. Start here: ${CANONICAL_PAGES.startConversation}`,
-        { isHandoff: true, href: CANONICAL_PAGES.startConversation }
+        `Absolutely — we can connect you with a real person. Start here: ${CANONICAL_PAGES.startConversation}${template}`,
+        {
+          isHandoff: true,
+          href: CANONICAL_PAGES.startConversation,
+          handoffReason: (handoff as any).reason,
+          sources: [
+            { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
+          ],
+        }
       );
     }
 
-    return sendOk(
-      res,
-      KNOWLEDGE.assistant_policy?.fallback_message || "Please use Start a Conversation.",
-      { isHandoff: true, href: CANONICAL_PAGES.startConversation }
-    );
-  } catch {
+    // Default fallback
+    return sendOk(res, KNOWLEDGE.assistant_policy?.fallback_message || "Please use Start a Conversation.", {
+      isHandoff: true,
+      href: CANONICAL_PAGES.startConversation,
+      sources: [
+        { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
+      ],
+    });
+  } catch (err: any) {
+    // still return 200 so widget never falls back; include error message for diagnosis
     return sendOk(
       res,
       "System temporarily unavailable. Please visit our 'Start a Conversation' page.",
-      { isHandoff: true, href: CANONICAL_PAGES.startConversation }
+      {
+        isHandoff: true,
+        href: CANONICAL_PAGES.startConversation,
+        debug: { handlerError: String(err?.message || err) },
+      }
     );
   }
 }
