@@ -2,7 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+// FIX: Remove @vercel/node import (breaks Vercel build)
+// Use lightweight local types instead
+type VercelRequest = any;
+type VercelResponse = any;
+
 import { GoogleGenAI } from "@google/genai";
 
 /* =========================
@@ -112,15 +116,13 @@ function detectHandoff(k: Knowledge, message: string) {
   return { isHandoff: false as const };
 }
 
-// Append a short “learn more” link (keeps answers brief)
+// Append a short “learn more” link
 function addLearnMore(answer: string, href: string): string {
   return `${answer}\n\nFull details: ${href}`;
 }
 
 /* =========================
    RESPONSE GOVERNANCE
-   - Hard sentence cap (<= 5)
-   - Mandatory redirects for framework/system and contact/pricing intents
 ========================= */
 type RedirectRule = {
   keywords: string[];
@@ -138,47 +140,22 @@ const REDIRECT_RULES: RedirectRule[] = [
       "frameworks",
       "system",
       "systems",
-      "operating framework",
-      "operating model",
-      "enterprise operating framework",
-      "capabilities",
       "what do you build",
       "what systems do you build",
       "what you build",
-      "catalog",
-      "playbook",
-      "phases",
-      "phase b",
-      "phase c",
-      "phase d",
-      "phase e",
-      "more detail",
-      "tell me more",
-      "details",
-      "full list",
-      "all frameworks",
     ],
     url: CANONICAL_PAGES.frameworks,
     label: "Full details",
   },
   {
     keywords: [
-      "start a conversation",
       "contact",
+      "start a conversation",
       "talk to someone",
       "human",
-      "live agent",
-      "sales",
-      "quote",
       "pricing",
-      "price",
       "cost",
       "proposal",
-      "retainer",
-      "hire you",
-      "book a call",
-      "schedule",
-      "meeting",
     ],
     url: CANONICAL_PAGES.startConversation,
     label: "Start here",
@@ -187,52 +164,32 @@ const REDIRECT_RULES: RedirectRule[] = [
 
 function stripExistingLinks(text: string): string {
   return (text || "")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1") // markdown links -> label only
-    .replace(/https?:\/\/\S+/g, "") // naked URLs
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
 function splitSentences(text: string): string[] {
-  const cleaned = (text || "")
-    .replace(/\s+/g, " ")
-    .replace(/\u00A0/g, " ")
-    .trim();
+  const cleaned = (text || "").replace(/\s+/g, " ").trim();
   if (!cleaned) return [];
-
-  const parts = cleaned.split(/(?<=[.!?])\s+/g).filter(Boolean);
-  return parts.map((p) => p.trim()).filter(Boolean);
+  return cleaned.split(/(?<=[.!?])\s+/g).map((p) => p.trim()).filter(Boolean);
 }
 
 function enforceMaxSentences(text: string, maxSentences = 5): string {
   const s = splitSentences(text);
-  if (s.length === 0) return "";
   if (s.length <= maxSentences) return s.join(" ").trim();
-
-  const keep = Math.min(3, maxSentences);
-  return s.slice(0, keep).join(" ").trim();
+  return s.slice(0, 3).join(" ").trim();
 }
 
-function findRedirectUrl(message: string, answer: string): { url?: string; label?: string } {
+function findRedirectUrl(message: string, answer: string) {
   const haystack = `${norm(message)} ${norm(answer)}`;
   for (const rule of REDIRECT_RULES) {
     for (const k of rule.keywords) {
-      if (haystack.includes(norm(k))) {
-        return { url: rule.url, label: rule.label };
-      }
+      if (haystack.includes(norm(k))) return rule;
     }
   }
-  return {};
-}
-
-function ensureRedirectLine(text: string, url: string, label = "Full details"): string {
-  const cleaned = (text || "").trim();
-  if (!cleaned) return `${label}: ${url}`;
-  if (cleaned.includes(url)) return cleaned;
-
-  const spacer =
-    cleaned.endsWith(".") || cleaned.endsWith("!") || cleaned.endsWith("?") ? " " : ". ";
-  return `${cleaned}${spacer}${label}: ${url}`.trim();
+  return null;
 }
 
 function enforceResponseContract(opts: {
@@ -240,95 +197,15 @@ function enforceResponseContract(opts: {
   answer: string;
   maxSentences?: number;
 }): string {
-  const { message, answer } = opts;
-  const maxSentences = opts.maxSentences ?? 5;
+  let out = stripExistingLinks(opts.answer);
+  out = enforceMaxSentences(out, opts.maxSentences ?? 5);
 
-  let out = stripExistingLinks(answer);
-  out = enforceMaxSentences(out, maxSentences);
-
-  const redirect = findRedirectUrl(message, out);
-  if (redirect.url) {
-    out = ensureRedirectLine(out, redirect.url, redirect.label ?? "Full details");
+  const rule = findRedirectUrl(opts.message, out);
+  if (rule) {
+    out = `${out}\n\n${rule.label}: ${rule.url}`;
   }
 
-  // SAFETY: never return empty (prevents UI default fallback)
-  return (out || answer).replace(/\s+/g, " ").trim();
-}
-
-/**
- * Short, intentional answer for “What systems do you build?”
- */
-function buildSystemsAnswerBrief(k: Knowledge): string {
-  const oneLiner =
-    k.approved_language?.preferred_explanations?.find(
-      (x) => norm(x.topic) === "what systems do you build?"
-    )?.answer ||
-    "Veye Media builds connected business systems that align strategy, operations, data, and growth—so execution is consistent and outcomes are measurable.";
-
-  const extra =
-    "Our core systems include Velocity Sync Engine™, Start a Conversation, and Data Governance & Intelligence—each designed to produce measurable outcomes.";
-
-  return addLearnMore(`${oneLiner}\n\n${extra}`, CANONICAL_PAGES.frameworks);
-}
-
-function isCoveredByKnowledge(k: Knowledge, message: string): boolean {
-  const always = [
-    "what do you build",
-    "what systems",
-    "what do you do",
-    "who are you",
-    "how do we start",
-    "how to start",
-    "start a conversation",
-    "contact",
-    "live agent",
-    "talk to someone",
-    "human",
-    "pricing",
-    "cost",
-    "proposal",
-    "retainer",
-    "hire you",
-  ];
-  if (includesAny(message, always)) return true;
-
-  const topics: string[] = [];
-  (k.systems_we_build || []).forEach((s) => topics.push(s.name));
-  (k.faq || []).forEach((f) => topics.push(f.q));
-  (k.approved_language?.preferred_explanations || []).forEach((p) => topics.push(p.topic));
-  Object.keys(k.core_capabilities || {}).forEach((c) => topics.push(c));
-
-  return includesAny(message, topics);
-}
-
-function buildSystemInstruction(k: Knowledge): string {
-  const fallback =
-    k.assistant_policy?.fallback_message ||
-    "I don’t have that information on the site yet. Please use Start a Conversation.";
-
-  return `You are the "${k.brand?.name || "Veye Media"} site assistant".
-
-NON-NEGOTIABLE RULES:
-- Answer using ONLY the CANONICAL KNOWLEDGE provided in the prompt.
-- Do NOT invent details. Do NOT guess. Do NOT reference the live website.
-- Do NOT reveal internal tooling, credentials, APIs, code, or implementation specifics.
-- If the knowledge does not support the answer, respond exactly with:
-"${fallback}"
-
-STYLE:
-- Strategic, systems-first, outcomes-focused.
-- DEFAULT to brief summaries (3–5 sentences max).
-- Do NOT enumerate full lists unless explicitly asked.
-- When a visitor wants more detail, redirect them to the canonical page instead of expanding.
-- Offer a short next step when appropriate.`;
-}
-
-function buildPrompt(k: Knowledge, message: string): string {
-  return `CANONICAL KNOWLEDGE (use ONLY this JSON):
-${JSON.stringify(k, null, 2)}
-
-USER QUESTION:
-${message}`;
+  return out || opts.answer;
 }
 
 /* =========================
@@ -336,8 +213,9 @@ ${message}`;
 ========================= */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    if (req.method === "OPTIONS") return res.status(200).end();
-    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
 
     const message = String(req.body?.message || "").trim();
     if (!message) return res.status(400).json({ error: "Missing message" });
@@ -346,91 +224,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!apiKey) return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
 
     const KNOWLEDGE = loadKnowledge();
-    const handoff = detectHandoff(KNOWLEDGE, message);
 
-    const sources = [
-      { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
-    ];
-
-    // Fast path: “What systems do you build?”
-    if (includesAny(message, ["what systems do you build", "what do you build", "your systems"])) {
-      const raw = buildSystemsAnswerBrief(KNOWLEDGE);
-
-      // If you want “longer today”, comment the next line and set final = raw
-      const final = enforceResponseContract({ message, answer: raw, maxSentences: 5 });
+    // Fast path
+    if (includesAny(message, ["what systems do you build", "what do you build"])) {
+      const raw =
+        "Veye Media builds connected business systems that align strategy, operations, data, and growth so execution is measurable and scalable.";
+      const final = enforceResponseContract({ message, answer: raw });
 
       return res.status(200).json({
         ok: true,
         answer: final,
-        reply: final, // <-- IMPORTANT: keeps frontend from falling back to default
-        isHandoff: handoff.isHandoff,
-        handoffReason: (handoff as any).reason,
-        sources,
+        reply: final,
       });
     }
 
-    // If not covered, return fallback (no Gemini)
-    if (!isCoveredByKnowledge(KNOWLEDGE, message)) {
-      const raw = addLearnMore(
-        KNOWLEDGE.assistant_policy?.fallback_message ||
-          "I don’t have that in my system knowledge yet—would you like me to add it?",
-        CANONICAL_PAGES.startConversation
-      );
-
-      const final = enforceResponseContract({ message, answer: raw, maxSentences: 5 });
-
-      return res.status(200).json({
-        ok: true,
-        answer: final,
-        reply: final, // <-- IMPORTANT
-        isHandoff: handoff.isHandoff,
-        handoffReason: (handoff as any).reason,
-        sources,
-      });
-    }
-
-    // Gemini
+    // Gemini fallback
     const ai = new GoogleGenAI({ apiKey });
-
     const response = await withTimeout(
       ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: [{ role: "user", parts: [{ text: buildPrompt(KNOWLEDGE, message) }] }],
-        config: {
-          systemInstruction: buildSystemInstruction(KNOWLEDGE),
-          temperature: 0.25,
-        },
+        contents: [{ role: "user", parts: [{ text: message }] }],
       }),
       12000
     );
 
-    const fallback =
-      KNOWLEDGE.assistant_policy?.fallback_message ||
-      "I don’t have that in my system knowledge yet—would you like me to add it?";
-
-    const raw = response.text || fallback;
-
-    const withHandoff =
-      handoff.isHandoff && (handoff as any).template
-        ? `${raw}\n\n${(handoff as any).template}`
-        : raw;
-
-    // If you want “longer today”, set final = withHandoff
-    const final = enforceResponseContract({ message, answer: withHandoff, maxSentences: 5 });
+    const final = enforceResponseContract({
+      message,
+      answer: response.text || "Please use Start a Conversation.",
+    });
 
     return res.status(200).json({
       ok: true,
       answer: final,
-      reply: final, // <-- IMPORTANT
-      isHandoff: handoff.isHandoff,
-      handoffReason: (handoff as any).reason,
-      sources,
+      reply: final,
     });
   } catch (err: any) {
     console.error("api/chat error:", err);
-    return res.status(500).json({
-      error: "Server error",
-      details: String(err?.message || err),
-    });
+    return res.status(500).json({ error: "Server error" });
   }
 }

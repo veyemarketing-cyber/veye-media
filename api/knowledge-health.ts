@@ -1,4 +1,8 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+// FIX: Remove @vercel/node import (breaks Vercel build)
+// Use lightweight local types instead
+type VercelRequest = any;
+type VercelResponse = any;
+
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,7 +19,9 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       ok: true,
       version: raw?.meta?.version,
       lastUpdated: raw?.meta?.last_updated,
-      systemsCount: Array.isArray(raw?.systems_we_build) ? raw.systems_we_build.length : 0,
+      systemsCount: Array.isArray(raw?.systems_we_build)
+        ? raw.systems_we_build.length
+        : 0,
     });
   } catch (err: any) {
     return res.status(500).json({
