@@ -102,11 +102,6 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-// Append a short “learn more” link
-function addLearnMore(answer: string, href: string): string {
-  return `${answer}\n\nFull details: ${href}`;
-}
-
 /* =========================
    RESPONSE GOVERNANCE
 ========================= */
@@ -195,7 +190,7 @@ function enforceResponseContract(opts: {
 }
 
 /* =========================
-   API Response + CORS (NEW)
+   CORS + Response Compatibility (NEW)
 ========================= */
 function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -203,14 +198,15 @@ function setCors(res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
 
-// Always return a usable text field so the frontend never falls back
 function sendOk(res: VercelResponse, text: string, extra: Record<string, any> = {}) {
   const t = String(text || "").trim() || "Please use Start a Conversation.";
   return res.status(200).json({
     ok: true,
     ...extra,
+    // Primary fields
     answer: t,
     reply: t,
+    // Compatibility fields
     text: t,
     message: t,
     content: t,
@@ -224,13 +220,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     setCors(res);
 
-    // ✅ IMPORTANT: Preflight support (prevents browser fetch from failing)
-    if (req.method === "OPTIONS") {
-      return res.status(200).end();
-    }
+    // Preflight support
+    if (req.method === "OPTIONS") return res.status(200).end();
 
     if (req.method !== "POST") {
-      // Return 200 w/ message to avoid frontend catch-fallback loops
       return sendOk(res, "Method not allowed. Please use Start a Conversation.", {
         isHandoff: true,
         href: CANONICAL_PAGES.startConversation,
@@ -264,7 +257,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return sendOk(res, final, {
         isHandoff: false,
         sources: [
-          { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
+          {
+            type: "knowledge",
+            version: KNOWLEDGE.meta?.version,
+            lastUpdated: KNOWLEDGE.meta?.last_updated,
+          },
         ],
       });
     }
@@ -287,14 +284,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return sendOk(res, final, {
       isHandoff: false,
       sources: [
-        { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
+        {
+          type: "knowledge",
+          version: KNOWLEDGE.meta?.version,
+          lastUpdated: KNOWLEDGE.meta?.last_updated,
+        },
       ],
     });
   } catch (err: any) {
     console.error("api/chat error:", err);
     setCors(res);
 
-    // ✅ Return 200 with compatibility fields so frontend doesn't fall back
+    // IMPORTANT: return 200 with compatibility fields so widget doesn't fall back
     return sendOk(
       res,
       "I encountered a synchronization error. For high-fidelity strategic discussions, please visit our 'Start a Conversation' page.",
