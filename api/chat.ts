@@ -2,12 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// FIX: Remove @vercel/node import (breaks Vercel build)
-// Use lightweight local types instead
+// FIX: No @vercel/node types (avoids TS build errors on Vercel)
 type VercelRequest = any;
 type VercelResponse = any;
-
-import { GoogleGenAI } from "@google/genai";
 
 /* =========================
    ESM-safe __dirname
@@ -16,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /* =========================
-   Canonical Pages (redirect for full detail)
+   Canonical Pages
 ========================= */
 const CANONICAL_PAGES = {
   frameworks: "/velocity-sync-engine",
@@ -28,27 +25,13 @@ const CANONICAL_PAGES = {
 ========================= */
 type Knowledge = {
   meta?: { version?: string; last_updated?: string };
-  brand?: {
-    name?: string;
-    positioning_one_liner?: string;
-    core_message?: string;
-  };
-  assistant_policy?: {
-    grounding_rule?: string;
-    fallback_message?: string;
-  };
-  systems_we_build?: Array<{
-    name: string;
-    outcomes?: string[];
-    what_it_includes?: string[];
-    what_it_is_not?: string[];
-  }>;
-  core_capabilities?: Record<string, string[]>;
+  brand?: { name?: string };
+  assistant_policy?: { fallback_message?: string };
+  systems_we_build?: Array<{ name: string }>;
+  faq?: Array<{ q: string; a: string }>;
   approved_language?: {
-    must_use_phrases?: string[];
     preferred_explanations?: Array<{ topic: string; answer: string }>;
   };
-  faq?: Array<{ q: string; a: string }>;
   handoff_rules?: {
     human_handoff_triggers?: Array<{
       name: string;
@@ -83,6 +66,12 @@ function loadKnowledge(): Knowledge {
 /* =========================
    Helpers
 ========================= */
+function setCors(res: VercelResponse) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
+
 function norm(s: string) {
   return (s || "").toLowerCase().replace(/\s+/g, " ").trim();
 }
@@ -92,170 +81,87 @@ function includesAny(text: string, list: string[]) {
   return (list || []).some((x) => t.includes(norm(x)));
 }
 
-// Prevent hangs
-async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return await Promise.race([
-    p,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`Gemini timeout after ${ms}ms`)), ms)
-    ),
-  ]);
-}
-
-/* =========================
-   RESPONSE GOVERNANCE
-========================= */
-type RedirectRule = {
-  keywords: string[];
-  url: string;
-  label?: string;
-};
-
-const REDIRECT_RULES: RedirectRule[] = [
-  {
-    keywords: [
-      "velocity",
-      "velocity sync",
-      "velocity sync engine",
-      "framework",
-      "frameworks",
-      "system",
-      "systems",
-      "what do you build",
-      "what systems do you build",
-      "what you build",
-    ],
-    url: CANONICAL_PAGES.frameworks,
-    label: "Full details",
-  },
-  {
-    keywords: [
-      "contact",
-      "start a conversation",
-      "talk to someone",
-      "human",
-      "pricing",
-      "cost",
-      "proposal",
-    ],
-    url: CANONICAL_PAGES.startConversation,
-    label: "Start here",
-  },
-];
-
-function stripExistingLinks(text: string): string {
-  return (text || "")
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
-    .replace(/https?:\/\/\S+/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function splitSentences(text: string): string[] {
-  const cleaned = (text || "").replace(/\s+/g, " ").trim();
-  if (!cleaned) return [];
-  return cleaned.split(/(?<=[.!?])\s+/g).map((p) => p.trim()).filter(Boolean);
-}
-
-function enforceMaxSentences(text: string, maxSentences = 5): string {
-  const s = splitSentences(text);
-  if (s.length <= maxSentences) return s.join(" ").trim();
-  return s.slice(0, 3).join(" ").trim();
-}
-
-function findRedirectUrl(message: string, answer: string) {
-  const haystack = `${norm(message)} ${norm(answer)}`;
-  for (const rule of REDIRECT_RULES) {
-    for (const k of rule.keywords) {
-      if (haystack.includes(norm(k))) return rule;
-    }
-  }
-  return null;
-}
-
-function enforceResponseContract(opts: {
-  message: string;
-  answer: string;
-  maxSentences?: number;
-}): string {
-  let out = stripExistingLinks(opts.answer);
-  out = enforceMaxSentences(out, opts.maxSentences ?? 5);
-
-  const rule = findRedirectUrl(opts.message, out);
-  if (rule) {
-    out = `${out}\n\n${rule.label}: ${rule.url}`;
-  }
-
-  return out || opts.answer;
-}
-
-/* =========================
-   CORS + Response Compatibility (NEW)
-========================= */
-function setCors(res: VercelResponse) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-}
-
+// Always return a usable text field so the frontend never falls back
 function sendOk(res: VercelResponse, text: string, extra: Record<string, any> = {}) {
   const t = String(text || "").trim() || "Please use Start a Conversation.";
   return res.status(200).json({
     ok: true,
     ...extra,
-    // Primary fields
     answer: t,
     reply: t,
-    // Compatibility fields
     text: t,
     message: t,
     content: t,
   });
 }
 
+function detectHandoff(k: Knowledge, message: string) {
+  const triggers = k.handoff_rules?.human_handoff_triggers || [];
+  for (const t of triggers) {
+    if (includesAny(message, t.match_any)) {
+      return {
+        isHandoff: true,
+        reason: t.handoff_reason || "User intent indicates human handoff.",
+        template: k.handoff_rules?.handoff_response_template,
+      };
+    }
+  }
+  return { isHandoff: false as const };
+}
+
+function buildSystemsAnswer(k: Knowledge): string {
+  const preferred =
+    k.approved_language?.preferred_explanations?.find(
+      (x) => norm(x.topic) === "what systems do you build?"
+    )?.answer ||
+    "Veye Media builds connected business systems that align strategy, operations, data, and growth—so execution is consistent and outcomes are measurable.";
+
+  const systems = (k.systems_we_build || [])
+    .map((s) => s.name)
+    .filter(Boolean)
+    .slice(0, 6);
+
+  const list = systems.length ? `Core systems include: ${systems.join(", ")}.` : "";
+  return `${preferred} ${list}\n\nFull details: ${CANONICAL_PAGES.frameworks}`.trim();
+}
+
+function findFaqAnswer(k: Knowledge, message: string): string | null {
+  const q = norm(message);
+  for (const item of k.faq || []) {
+    // simple contains match (good enough for today)
+    if (item?.q && (norm(item.q) === q || q.includes(norm(item.q)))) {
+      return String(item.a || "").trim() || null;
+    }
+  }
+  return null;
+}
+
 /* =========================
-   API Handler
+   API Handler (Knowledge-only for stability)
 ========================= */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCors(res);
+
+  // Preflight support
+  if (req.method === "OPTIONS") return res.status(200).end();
+
+  // IMPORTANT: return 200 w/ message to avoid frontend catch fallback loops
+  if (req.method !== "POST") {
+    return sendOk(res, "Method not allowed. Please use Start a Conversation.", {
+      isHandoff: true,
+      href: CANONICAL_PAGES.startConversation,
+    });
+  }
+
   try {
-    setCors(res);
-
-    // Preflight support
-    if (req.method === "OPTIONS") return res.status(200).end();
-
-    if (req.method !== "POST") {
-      return sendOk(res, "Method not allowed. Please use Start a Conversation.", {
-        isHandoff: true,
-        href: CANONICAL_PAGES.startConversation,
-      });
-    }
-
     const message = String(req.body?.message || "").trim();
+    const KNOWLEDGE = loadKnowledge();
+    const handoff = detectHandoff(KNOWLEDGE, message);
+
     if (!message) {
       return sendOk(res, "Please enter a question, or Start a Conversation.", {
         isHandoff: true,
         href: CANONICAL_PAGES.startConversation,
-      });
-    }
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return sendOk(res, "System temporarily unavailable. Please Start a Conversation.", {
-        isHandoff: true,
-        href: CANONICAL_PAGES.startConversation,
-      });
-    }
-
-    const KNOWLEDGE = loadKnowledge();
-
-    // Fast path
-    if (includesAny(message, ["what systems do you build", "what do you build"])) {
-      const raw =
-        "Veye Media builds connected business systems that align strategy, operations, data, and growth so execution is measurable and scalable.";
-      const final = enforceResponseContract({ message, answer: raw });
-
-      return sendOk(res, final, {
-        isHandoff: false,
         sources: [
           {
             type: "knowledge",
@@ -266,23 +172,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Gemini
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await withTimeout(
-      ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ role: "user", parts: [{ text: message }] }],
-      }),
-      12000
-    );
+    // Fast path: systems
+    if (includesAny(message, ["what systems do you build", "what do you build", "your systems"])) {
+      return sendOk(res, buildSystemsAnswer(KNOWLEDGE), {
+        isHandoff: false,
+        href: CANONICAL_PAGES.frameworks,
+        sources: [
+          {
+            type: "knowledge",
+            version: KNOWLEDGE.meta?.version,
+            lastUpdated: KNOWLEDGE.meta?.last_updated,
+          },
+        ],
+      });
+    }
 
-    const final = enforceResponseContract({
-      message,
-      answer: response.text || "Please use Start a Conversation.",
-    });
+    // FAQ match (if any)
+    const faq = findFaqAnswer(KNOWLEDGE, message);
+    if (faq) {
+      return sendOk(res, `${faq}\n\nFull details: ${CANONICAL_PAGES.frameworks}`, {
+        isHandoff: false,
+        href: CANONICAL_PAGES.frameworks,
+        sources: [
+          {
+            type: "knowledge",
+            version: KNOWLEDGE.meta?.version,
+            lastUpdated: KNOWLEDGE.meta?.last_updated,
+          },
+        ],
+      });
+    }
 
-    return sendOk(res, final, {
-      isHandoff: false,
+    // Handoff intent? Provide a short response + handoff CTA
+    if (handoff.isHandoff) {
+      const template = (handoff as any).template
+        ? `\n\n${(handoff as any).template}`
+        : "";
+      return sendOk(
+        res,
+        `Absolutely — we can connect you with a real person. Start here: ${CANONICAL_PAGES.startConversation}${template}`,
+        {
+          isHandoff: true,
+          href: CANONICAL_PAGES.startConversation,
+          handoffReason: (handoff as any).reason,
+          sources: [
+            {
+              type: "knowledge",
+              version: KNOWLEDGE.meta?.version,
+              lastUpdated: KNOWLEDGE.meta?.last_updated,
+            },
+          ],
+        }
+      );
+    }
+
+    // Default fallback (knowledge-governed)
+    return sendOk(res, KNOWLEDGE.assistant_policy?.fallback_message || "Please use Start a Conversation.", {
+      isHandoff: true,
+      href: CANONICAL_PAGES.startConversation,
       sources: [
         {
           type: "knowledge",
@@ -292,13 +239,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ],
     });
   } catch (err: any) {
-    console.error("api/chat error:", err);
-    setCors(res);
-
-    // IMPORTANT: return 200 with compatibility fields so widget doesn't fall back
+    // Still return 200 with compatibility fields so widget never falls back
     return sendOk(
       res,
-      "I encountered a synchronization error. For high-fidelity strategic discussions, please visit our 'Start a Conversation' page.",
+      "System temporarily unavailable. Please visit our 'Start a Conversation' page.",
       { isHandoff: true, href: CANONICAL_PAGES.startConversation }
     );
   }
