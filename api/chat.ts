@@ -102,20 +102,6 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-function detectHandoff(k: Knowledge, message: string) {
-  const triggers = k.handoff_rules?.human_handoff_triggers || [];
-  for (const t of triggers) {
-    if (includesAny(message, t.match_any)) {
-      return {
-        isHandoff: true,
-        reason: t.handoff_reason || "User intent indicates human handoff.",
-        template: k.handoff_rules?.handoff_response_template,
-      };
-    }
-  }
-  return { isHandoff: false as const };
-}
-
 // Append a short “learn more” link
 function addLearnMore(answer: string, href: string): string {
   return `${answer}\n\nFull details: ${href}`;
@@ -233,8 +219,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       return res.status(200).json({
         ok: true,
+
+        // Primary fields
         answer: final,
         reply: final,
+
+        // Compatibility fields (fixes widget “sync error”)
+        text: final,
+        message: final,
+        content: final,
       });
     }
 
@@ -255,8 +248,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({
       ok: true,
+
+      // Primary fields
       answer: final,
       reply: final,
+
+      // Compatibility fields (fixes widget “sync error”)
+      text: final,
+      message: final,
+      content: final,
     });
   } catch (err: any) {
     console.error("api/chat error:", err);
