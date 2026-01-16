@@ -7,7 +7,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   isHandoff?: boolean;
-  sourceLabel?:string; //NEW: e.g., "Knowledge v1.1 (2026-01-15)"
+  sourceLabel?: string; // NEW: e.g., "Knowledge v1.1 (2026-01-15)"
 }
 
 const SYSTEM_INSTRUCTION = `You are the "Veye Media site assistant". 
@@ -37,7 +37,7 @@ When in HANDOFF mode, you must:
 Tone: Calm, confident, strategic, professional, non-salesy. Avoid buzzwords and technical jargon.`;
 
 const HUMAN_KEYWORDS = [
-  'live agent', 'talk to someone', 'human', 'call you', 'sales', 
+  'live agent', 'talk to someone', 'human', 'call you', 'sales',
   'meeting', 'schedule a call', 'speak to victor', 'real person',
   'person', 'phone call'
 ];
@@ -46,6 +46,18 @@ const INTENT_KEYWORDS = [
   'pricing', 'proposal', 'retainer', 'we need help', 'urgent', 'can you do this for us',
   'cost', 'how much', 'hire you'
 ];
+
+type ChatApiResponse = {
+  ok?: boolean;
+  answer?: string;
+  reply?: string;
+  text?: string;
+  message?: string;
+  content?: string;
+  sources?: Array<any>;
+  error?: string;
+  details?: string;
+};
 
 export const ChatAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -78,8 +90,8 @@ export const ChatAssistant: React.FC = () => {
     if (isHumanRequest) {
       // Immediate switch to handoff mode without AI delay for human requests
       setTimeout(() => {
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
+        setMessages(prev => [...prev, {
+          role: 'assistant',
           content: "Absolutely — we can connect you with a real person. Our team can dive deeper into your specific strategic requirements.",
           isHandoff: true
         }]);
@@ -89,35 +101,52 @@ export const ChatAssistant: React.FC = () => {
     }
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const chatHistory = messages.map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }]
-      }));
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [
-          ...chatHistory,
-          { role: 'user', parts: [{ text: originalMessage }] }
-        ],
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.7,
-        }
+      // ✅ FIX: Browser should NOT call Gemini directly.
+      // Call the serverless API instead.
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: originalMessage }),
       });
 
-      const assistantContent = response.text || "I apologize, but I am unable to process that inquiry at this moment. Would you like to start a direct strategic conversation with our team?";
-      
-      // If AI detects intent but hasn't explicitly triggered handoff UI, we can supplement it if keywords matched
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
+      let data: ChatApiResponse | null = null;
+      try {
+        data = (await r.json()) as ChatApiResponse;
+      } catch {
+        data = null;
+      }
+
+      if (!r.ok || !data) {
+        throw new Error(`Chat API failed: ${r.status}`);
+      }
+
+      const assistantContent =
+        data.text ??
+        data.message ??
+        data.content ??
+        data.reply ??
+        data.answer ??
+        "I apologize, but I am unable to process that inquiry at this moment. Would you like to start a direct strategic conversation with our team?";
+
+      // Optional: show a small source label if returned
+      const sourceLabel =
+        Array.isArray(data.sources) && data.sources.length > 0
+          ? `Knowledge ${data.sources[0]?.version || ''} ${data.sources[0]?.lastUpdated ? `(${data.sources[0].lastUpdated})` : ''}`.trim()
+          : undefined;
+
+      setMessages(prev => [...prev, {
+        role: 'assistant',
         content: assistantContent,
-        isHandoff: isHighIntent
+        isHandoff: isHighIntent,
+        sourceLabel,
       }]);
     } catch (error) {
       console.error("Assistant Error:", error);
-      setMessages(prev => [...prev, { role: 'assistant', content: "I encountered a synchronization error. For high-fidelity strategic discussions, please visit our 'Start a Conversation' page.", isHandoff: true }]);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "I encountered a synchronization error. For high-fidelity strategic discussions, please visit our 'Start a Conversation' page.",
+        isHandoff: true
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -153,25 +182,32 @@ export const ChatAssistant: React.FC = () => {
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${m.role === 'assistant' ? 'bg-veye-blue text-white' : 'bg-slate-200 text-slate-600'}`}>
                   {m.role === 'assistant' ? <Bot size={16} /> : <User size={16} />}
                 </div>
-                <div className={`max-w-[85%] flex flex-col gap-3`}>
+                <div className={`max-w-[85%] flex flex-col gap-2`}>
                   <div className={`p-4 rounded-2xl text-sm leading-relaxed font-medium shadow-sm ${
-                    m.role === 'assistant' 
-                      ? 'bg-white text-slate-700 border border-slate-100 rounded-tl-none' 
+                    m.role === 'assistant'
+                      ? 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
                       : 'bg-veye-navy text-white rounded-tr-none'
                   }`}>
                     {m.content}
                   </div>
-                  
+
+                  {/* Optional source label */}
+                  {m.sourceLabel && m.role === 'assistant' && (
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2">
+                      {m.sourceLabel}
+                    </div>
+                  )}
+
                   {m.isHandoff && (
                     <div className="p-5 bg-white border border-veye-blue/20 rounded-2xl shadow-lg animate-in fade-in slide-in-from-top-2 duration-500">
                       <p className="text-xs font-bold text-veye-navy mb-4 uppercase tracking-widest">Connect with our team</p>
-                      <Link 
-                        to="/start-a-conversation" 
+                      <Link
+                        to="/start-a-conversation"
                         className="w-full py-3 bg-veye-blue hover:bg-veye-blue/90 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md mb-4"
                       >
                         Start a Conversation <ArrowRight size={16} />
                       </Link>
-                      
+
                       <div className="space-y-2 border-t border-slate-100 pt-4">
                         <div className="flex items-center gap-3 text-slate-500 hover:text-veye-navy transition-colors">
                           <Phone size={14} className="text-veye-blue" />
@@ -212,7 +248,7 @@ export const ChatAssistant: React.FC = () => {
                 placeholder="Ask about our growth systems..."
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-5 pr-12 py-4 text-sm focus:outline-none focus:border-veye-blue focus:ring-1 focus:ring-veye-blue transition-all font-medium"
               />
-              <button 
+              <button
                 onClick={handleSend}
                 disabled={!input.trim() || isLoading}
                 className="absolute right-2 p-2 bg-veye-navy text-white rounded-xl hover:bg-slate-800 disabled:bg-slate-300 transition-all shadow-md"
