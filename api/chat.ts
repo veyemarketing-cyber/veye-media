@@ -195,19 +195,63 @@ function enforceResponseContract(opts: {
 }
 
 /* =========================
+   API Response + CORS (NEW)
+========================= */
+function setCors(res: VercelResponse) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
+
+// Always return a usable text field so the frontend never falls back
+function sendOk(res: VercelResponse, text: string, extra: Record<string, any> = {}) {
+  const t = String(text || "").trim() || "Please use Start a Conversation.";
+  return res.status(200).json({
+    ok: true,
+    ...extra,
+    answer: t,
+    reply: t,
+    text: t,
+    message: t,
+    content: t,
+  });
+}
+
+/* =========================
    API Handler
 ========================= */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
+    setCors(res);
+
+    // ✅ IMPORTANT: Preflight support (prevents browser fetch from failing)
+    if (req.method === "OPTIONS") {
+      return res.status(200).end();
+    }
+
     if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
+      // Return 200 w/ message to avoid frontend catch-fallback loops
+      return sendOk(res, "Method not allowed. Please use Start a Conversation.", {
+        isHandoff: true,
+        href: CANONICAL_PAGES.startConversation,
+      });
     }
 
     const message = String(req.body?.message || "").trim();
-    if (!message) return res.status(400).json({ error: "Missing message" });
+    if (!message) {
+      return sendOk(res, "Please enter a question, or Start a Conversation.", {
+        isHandoff: true,
+        href: CANONICAL_PAGES.startConversation,
+      });
+    }
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
+    if (!apiKey) {
+      return sendOk(res, "System temporarily unavailable. Please Start a Conversation.", {
+        isHandoff: true,
+        href: CANONICAL_PAGES.startConversation,
+      });
+    }
 
     const KNOWLEDGE = loadKnowledge();
 
@@ -217,21 +261,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         "Veye Media builds connected business systems that align strategy, operations, data, and growth so execution is measurable and scalable.";
       const final = enforceResponseContract({ message, answer: raw });
 
-      return res.status(200).json({
-        ok: true,
-
-        // Primary fields
-        answer: final,
-        reply: final,
-
-        // Compatibility fields (fixes widget “sync error”)
-        text: final,
-        message: final,
-        content: final,
+      return sendOk(res, final, {
+        isHandoff: false,
+        sources: [
+          { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
+        ],
       });
     }
 
-    // Gemini fallback
+    // Gemini
     const ai = new GoogleGenAI({ apiKey });
     const response = await withTimeout(
       ai.models.generateContent({
@@ -246,20 +284,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       answer: response.text || "Please use Start a Conversation.",
     });
 
-    return res.status(200).json({
-      ok: true,
-
-      // Primary fields
-      answer: final,
-      reply: final,
-
-      // Compatibility fields (fixes widget “sync error”)
-      text: final,
-      message: final,
-      content: final,
+    return sendOk(res, final, {
+      isHandoff: false,
+      sources: [
+        { type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated },
+      ],
     });
   } catch (err: any) {
     console.error("api/chat error:", err);
-    return res.status(500).json({ error: "Server error" });
+    setCors(res);
+
+    // ✅ Return 200 with compatibility fields so frontend doesn't fall back
+    return sendOk(
+      res,
+      "I encountered a synchronization error. For high-fidelity strategic discussions, please visit our 'Start a Conversation' page.",
+      { isHandoff: true, href: CANONICAL_PAGES.startConversation }
+    );
   }
 }
