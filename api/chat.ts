@@ -73,13 +73,12 @@ function includesAny(text: string, list: string[]) {
 }
 
 /* =========================
-   SEND OK (BUILD MARKER ADDED)
+   SEND OK
 ========================= */
 function sendOk(res: VercelResponse, text: string, extra: Record<string, any> = {}) {
   const t = String(text || "").trim() || "Please use Start a Conversation.";
   return res.status(200).json({
     ok: true,
-    buildTag: "diag-2026-01-17a", // 🔎 deterministic deployment marker
     ...extra,
     answer: t,
     reply: t,
@@ -90,7 +89,7 @@ function sendOk(res: VercelResponse, text: string, extra: Record<string, any> = 
 }
 
 /* =========================
-   Knowledge Load (with runtime diagnostics)
+   Knowledge Load
 ========================= */
 let KNOWLEDGE_CACHE: Knowledge | null = null;
 
@@ -147,7 +146,7 @@ function loadKnowledgeWithDebug(): {
 }
 
 /* =========================
-   Matching helpers (knowledge-only)
+   Matching helpers
 ========================= */
 function detectHandoff(k: Knowledge, message: string) {
   const triggers = k.handoff_rules?.human_handoff_triggers || [];
@@ -189,19 +188,14 @@ function findFaqAnswer(k: Knowledge, message: string): string | null {
   return null;
 }
 
-/**
- * Match approved_language.preferred_explanations (exact + soft)
- */
 function findPreferredExplanation(k: Knowledge, message: string): string | null {
   const q = normQ(message);
   const list = k.approved_language?.preferred_explanations || [];
   if (!Array.isArray(list) || list.length === 0) return null;
 
-  // Exact match
   const exact = list.find((x) => x?.topic && normQ(x.topic) === q);
   if (exact?.answer) return String(exact.answer).trim() || null;
 
-  // Soft match
   const soft = list.find((x) => {
     const t = normQ(x?.topic || "");
     return t && (q.includes(t) || t.includes(q));
@@ -211,9 +205,6 @@ function findPreferredExplanation(k: Knowledge, message: string): string | null 
   return null;
 }
 
-/**
- * Answer “what is <system>” from systems_we_build by matching system name
- */
 function findSystemByNameAnswer(k: Knowledge, message: string): string | null {
   const q = normQ(message);
   const systems = k.systems_we_build || [];
@@ -232,19 +223,17 @@ function findSystemByNameAnswer(k: Knowledge, message: string): string | null {
   const parts: string[] = [];
   parts.push(`${matched.name} is one of the core systems Veye Media builds.`);
 
-  const outcomes = Array.isArray(matched.outcomes) ? matched.outcomes.filter(Boolean) : [];
-  const includes = Array.isArray(matched.what_it_includes) ? matched.what_it_includes.filter(Boolean) : [];
-  const not = Array.isArray(matched.what_it_is_not) ? matched.what_it_is_not.filter(Boolean) : [];
-
-  if (outcomes.length) parts.push(`Outcomes: ${outcomes.join("; ")}.`);
-  if (includes.length) parts.push(`Includes: ${includes.join("; ")}.`);
-  if (not.length) parts.push(`Not: ${not.join("; ")}.`);
+  if (matched.outcomes?.length) parts.push(`Outcomes: ${matched.outcomes.join("; ")}.`);
+  if (matched.what_it_includes?.length)
+    parts.push(`Includes: ${matched.what_it_includes.join("; ")}.`);
+  if (matched.what_it_is_not?.length)
+    parts.push(`Not: ${matched.what_it_is_not.join("; ")}.`);
 
   return parts.join(" ").trim();
 }
 
 /* =========================
-   API Handler (Knowledge-only)
+   API Handler
 ========================= */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCors(res);
@@ -260,110 +249,75 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const message = String(req.body?.message || "").trim();
-
     const { knowledge: KNOWLEDGE, debug } = loadKnowledgeWithDebug();
+
     if (!KNOWLEDGE) {
       return sendOk(
         res,
         "System temporarily unavailable. Please visit our 'Start a Conversation' page.",
-        { isHandoff: true, href: CANONICAL_PAGES.startConversation, debug }
+        process.env.NODE_ENV !== "production"
+          ? { isHandoff: true, href: CANONICAL_PAGES.startConversation, debug }
+          : { isHandoff: true, href: CANONICAL_PAGES.startConversation }
       );
     }
-
-    const handoff = detectHandoff(KNOWLEDGE, message);
 
     if (!message) {
       return sendOk(res, "Please enter a question, or Start a Conversation.", {
         isHandoff: true,
         href: CANONICAL_PAGES.startConversation,
-        sources: [{ type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated }],
+        sources: [{ type: "knowledge", version: KNOWLEDGE.meta?.version }],
       });
     }
 
-    // Systems list
+    const handoff = detectHandoff(KNOWLEDGE, message);
+
     if (includesAny(message, ["what systems do you build", "what do you build", "your systems"])) {
       return sendOk(res, buildSystemsAnswer(KNOWLEDGE), {
         isHandoff: false,
         href: CANONICAL_PAGES.frameworks,
-        sources: [{ type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated }],
       });
     }
 
-    // Preferred explanations (exact/soft)
     const preferred = findPreferredExplanation(KNOWLEDGE, message);
     if (preferred) {
       return sendOk(res, `${preferred}\n\nFull details: ${CANONICAL_PAGES.frameworks}`, {
         isHandoff: false,
         href: CANONICAL_PAGES.frameworks,
-        sources: [{ type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated }],
       });
     }
 
-    // System name answer
     const systemAnswer = findSystemByNameAnswer(KNOWLEDGE, message);
     if (systemAnswer) {
       return sendOk(res, `${systemAnswer}\n\nFull details: ${CANONICAL_PAGES.frameworks}`, {
         isHandoff: false,
         href: CANONICAL_PAGES.frameworks,
-        sources: [{ type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated }],
       });
     }
 
-    // FAQ match
     const faq = findFaqAnswer(KNOWLEDGE, message);
     if (faq) {
       return sendOk(res, `${faq}\n\nFull details: ${CANONICAL_PAGES.frameworks}`, {
         isHandoff: false,
         href: CANONICAL_PAGES.frameworks,
-        sources: [{ type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated }],
       });
     }
 
-    // Handoff intent
     if (handoff.isHandoff) {
-      const template = (handoff as any).template ? `\n\n${(handoff as any).template}` : "";
       return sendOk(
         res,
-        `Absolutely — we can connect you with a real person. Start here: ${CANONICAL_PAGES.startConversation}${template}`,
-        {
-          isHandoff: true,
-          href: CANONICAL_PAGES.startConversation,
-          handoffReason: (handoff as any).reason,
-          sources: [{ type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated }],
-        }
+        `Absolutely — we can connect you with a real person. Start here: ${CANONICAL_PAGES.startConversation}`,
+        { isHandoff: true, href: CANONICAL_PAGES.startConversation }
       );
     }
-
-    // Default fallback (DIAGNOSTIC)
-    const preferredTopics = (KNOWLEDGE.approved_language?.preferred_explanations || [])
-      .map((x) => String(x.topic || "").trim())
-      .slice(0, 10);
-
-    const systemNames = (KNOWLEDGE.systems_we_build || [])
-      .map((s) => String(s.name || "").trim())
-      .slice(0, 10);
-
-    const faqQs = (KNOWLEDGE.faq || [])
-      .map((f) => String(f.q || "").trim())
-      .slice(0, 10);
 
     return sendOk(res, KNOWLEDGE.assistant_policy?.fallback_message || "Please use Start a Conversation.", {
       isHandoff: true,
       href: CANONICAL_PAGES.startConversation,
-      sources: [{ type: "knowledge", version: KNOWLEDGE.meta?.version, lastUpdated: KNOWLEDGE.meta?.last_updated }],
-      debug: {
-        loadedVersion: KNOWLEDGE.meta?.version,
-        loadedUpdated: KNOWLEDGE.meta?.last_updated,
-        samplePreferredTopics: preferredTopics,
-        sampleSystemNames: systemNames,
-        sampleFaqQs: faqQs,
-      },
     });
   } catch (err: any) {
     return sendOk(res, "System temporarily unavailable. Please visit our 'Start a Conversation' page.", {
       isHandoff: true,
       href: CANONICAL_PAGES.startConversation,
-      debug: { handlerError: String(err?.message || err) },
     });
   }
 }
