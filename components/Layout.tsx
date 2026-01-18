@@ -50,7 +50,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     <button
                       type="button"
                       onClick={() => setActiveDropdown(activeDropdown === item.label ? null : item.label)}
-                      className={`text-[16px] font-semibold flex items-center gap-1 transition-colors hover:text-veye-blue ${
+                      className={`text-[15px] font-semibold flex items-center gap-1 transition-colors hover:text-veye-blue ${
                         location.pathname.startsWith('/systems-we-build') ? 'text-veye-blue' : 'text-slate-700'
                       }`}
                       aria-haspopup="menu"
@@ -65,7 +65,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   ) : (
                     <Link
                       to={item.path}
-                      className={`text-[16px] font-semibold transition-colors hover:text-veye-blue ${
+                      className={`text-[15px] font-semibold transition-colors hover:text-veye-blue ${
                         location.pathname === item.path ? 'text-veye-blue' : 'text-slate-700'
                       }`}
                     >
