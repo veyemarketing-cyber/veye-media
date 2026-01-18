@@ -42,8 +42,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               </Link>
             </div>
 
-            {/* Desktop nav */}
-            <div className="hidden xl:flex items-center gap-8">
+            {/* Desktop nav (ONLY on 2xl and above to prevent wrap on 12" laptops) */}
+            <div className="hidden 2xl:flex items-center gap-8">
               {NAVIGATION.map((item) => (
                 <div key={item.path} className="relative" ref={item.children ? dropdownRef : null}>
                   {item.children ? (
@@ -90,8 +90,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               ))}
             </div>
 
-            {/* Mobile menu button */}
-            <div className="xl:hidden flex items-center">
+            {/* Mobile menu button (used for <2xl to avoid desktop wrap) */}
+            <div className="2xl:hidden flex items-center">
               <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
@@ -104,9 +104,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </div>
         </div>
 
-        {/* Mobile menu panel */}
+        {/* Mobile menu panel (used for <2xl) */}
         {isOpen && (
-          <div className="xl:hidden bg-white border-t border-slate-100 max-h-[calc(100vh-64px)] overflow-y-auto">
+          <div className="2xl:hidden bg-white border-t border-slate-100 max-h-[calc(100vh-64px)] overflow-y-auto">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
               <div className="space-y-4">
                 {NAVIGATION.map((item) => (
