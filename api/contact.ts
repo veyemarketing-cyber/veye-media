@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 export default async function handler(req: any, res: any) {
   // --- CORS HEADERS ---
@@ -16,22 +16,27 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // --- DEBUG (TEMPORARY — DO NOT REMOVE YET) ---
+  // --- DEBUG (safe, SMTP-focused) ---
   console.log('HOST:', req.headers.host);
-  console.log('RESEND_KEY_PREFIX:', process.env.RESEND_API_KEY?.slice(0, 6));
-  console.log('RESEND_FROM_EMAIL:', process.env.RESEND_FROM_EMAIL);
+  console.log('SMTP_HOST set:', Boolean(process.env.SMTP_HOST));
+  console.log('SMTP_USER:', process.env.SMTP_USER);
+  console.log('CONTACT_FROM_EMAIL:', process.env.CONTACT_FROM_EMAIL);
+  console.log('CONTACT_TO_EMAIL:', process.env.CONTACT_TO_EMAIL);
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'Missing RESEND_API_KEY' });
-  }
+  // --- REQUIRED ENV VARS ---
+  const SMTP_HOST = process.env.SMTP_HOST;
+  const SMTP_PORT = process.env.SMTP_PORT;
+  const SMTP_USER = process.env.SMTP_USER;
+  const SMTP_PASS = process.env.SMTP_PASS;
+  const FROM_EMAIL = process.env.CONTACT_FROM_EMAIL;
+  const TO_EMAIL = process.env.CONTACT_TO_EMAIL;
 
-  const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'vmccoy@veyemarketing.com';
-
-  const FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
-  if (!FROM_EMAIL) {
-    return res.status(500).json({ error: 'Missing RESEND_FROM_EMAIL' });
-  }
+  if (!SMTP_HOST) return res.status(500).json({ error: 'Missing SMTP_HOST' });
+  if (!SMTP_PORT) return res.status(500).json({ error: 'Missing SMTP_PORT' });
+  if (!SMTP_USER) return res.status(500).json({ error: 'Missing SMTP_USER' });
+  if (!SMTP_PASS) return res.status(500).json({ error: 'Missing SMTP_PASS' });
+  if (!FROM_EMAIL) return res.status(500).json({ error: 'Missing CONTACT_FROM_EMAIL' });
+  if (!TO_EMAIL) return res.status(500).json({ error: 'Missing CONTACT_TO_EMAIL' });
 
   try {
     const {
@@ -56,14 +61,23 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const resend = new Resend(apiKey);
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT),
+      secure: false, // port 587 uses STARTTLS
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+      requireTLS: true,
+    });
 
     const subject = `Start a Conversation — ${fullName} (${organization})`;
 
-    const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+    await transporter.sendMail({
+      from: `Veye Media <${FROM_EMAIL}>`,
       to: TO_EMAIL,
-      replyTo: 'vmccoy@veymedia.co',
+      replyTo: email, // reply goes to the lead who filled the form
       subject,
       text: `
 Full Name: ${fullName}
@@ -80,14 +94,9 @@ Page: ${page || 'unknown'}
       `.trim(),
     });
 
-    if (error) {
-      console.error('Resend send error:', error);
-      return res.status(502).json({ error: 'Resend send failed', details: error });
-    }
-
-    return res.status(200).json({ ok: true, id: data?.id });
-  } catch (err) {
-    console.error('API /api/contact error:', err);
-    return res.status(500).json({ error: 'Server error' });
+    return res.status(200).json({ ok: true });
+  } catch (err: any) {
+    console.error('SMTP send error:', err?.message || err, err);
+    return res.status(500).json({ error: 'Email send failed' });
   }
 }
