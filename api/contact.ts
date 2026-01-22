@@ -22,8 +22,14 @@ export default async function handler(req: any, res: any) {
   }
 
   const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'vmccoy@veyemarketing.com';
-  const FROM_EMAIL =
-    process.env.RESEND_FROM_EMAIL || 'Veye Media <onboarding@resend.dev>';
+
+  const FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
+  if (!FROM_EMAIL) {
+    return res.status(500).json({ error: 'Missing RESEND_FROM_EMAIL' });
+  }
+
+  // DEBUG: confirm correct sender at runtime
+  console.log('RESEND_FROM_EMAIL in use:', FROM_EMAIL);
 
   try {
     const {
@@ -55,7 +61,7 @@ export default async function handler(req: any, res: any) {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: TO_EMAIL,
-      replyTo: email,
+      replyTo: 'vmccoy@veymedia.co',
       subject,
       text: `
 Full Name: ${fullName}
