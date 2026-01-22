@@ -16,6 +16,11 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // --- DEBUG (TEMPORARY — DO NOT REMOVE YET) ---
+  console.log('HOST:', req.headers.host);
+  console.log('RESEND_KEY_PREFIX:', process.env.RESEND_API_KEY?.slice(0, 6));
+  console.log('RESEND_FROM_EMAIL:', process.env.RESEND_FROM_EMAIL);
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ error: 'Missing RESEND_API_KEY' });
@@ -27,9 +32,6 @@ export default async function handler(req: any, res: any) {
   if (!FROM_EMAIL) {
     return res.status(500).json({ error: 'Missing RESEND_FROM_EMAIL' });
   }
-
-  // DEBUG: confirm correct sender at runtime
-  console.log('RESEND_FROM_EMAIL in use:', FROM_EMAIL);
 
   try {
     const {
