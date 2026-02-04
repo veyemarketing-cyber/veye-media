@@ -182,8 +182,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail size={16} className="text-veye-blue" />
-                  <a href="mailto:hello@veyemedia.co" className="hover:text-white transition-colors">
-                    hello@veyemedia.co
+                  <a href="mailto:systems@veyemedia.co" className="hover:text-white transition-colors">
+                    systems@veyemedia.co
                   </a>
                 </div>
               </div>
