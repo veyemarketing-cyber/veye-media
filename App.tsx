@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { Layout } from './components/Layout';
+import Layout  from './components/Layout';
 import { Home } from './pages/Home';
 import { VelocitySync } from './pages/VelocitySync';
 import { SystemsWeBuild } from './pages/SystemsWeBuild';
@@ -27,17 +27,24 @@ const GtmListener: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // For HashRouter, the real route is in window.location.hash (e.g., "#/start-a-conversation")
+    // Correctly captures the HashRouter path (e.g., /velocity-sync)
     const hash = typeof window !== 'undefined' ? window.location.hash || '' : '';
     const page_path = hash.startsWith('#') ? hash.slice(1) : (location.pathname + location.search);
 
-    // Ensure dataLayer exists and push a consistent event payload
+    // 1. Existing dataLayer push
     (window as any).dataLayer = (window as any).dataLayer || [];
     (window as any).dataLayer.push({
       event: 'virtual_pageview',
       page_path,
       page_title: typeof document !== 'undefined' ? document.title : 'Veye Media',
     });
+
+    // 2. DIRECT GA4 PUSH (This is what clears the error)
+    if ((window as any).gtag) {
+      (window as any).gtag('config', 'G-HXRX9SQ2GY', {
+        page_path: page_path,
+      });
+    }
   }, [location]);
 
   return null;
