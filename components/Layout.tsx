@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation, Outlet } from 'react-router-dom';
-import Navigation from './Navigation': // FIXED path
-import { Logo } from './Logo';         // FIXED: Added {} for named export
+import { Analytics } from '@vercel/analytics/react'; // ADDED: Vercel Analytics import
+import { Logo } from './Logo'; 
 
 declare global {
   interface Window {
@@ -23,10 +23,13 @@ export default function Layout() {
 
   return (
     <>
-      <Navigation />
       <main style={{ minHeight: '70vh' }}>
         <Outlet />
       </main>
+      
+      {/* ADDED: Vercel Analytics component to track visits */}
+      <Analytics /> 
+      
       {/* Footer can be added here if needed */}
     </>
   );
