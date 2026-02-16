@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@google/genai": "^1.35.0",
-    "@vercel/analytics": "^1.6.1",
     "cheerio": "^1.1.2",
     "lucide-react": "^0.562.0",
     "nodemailer": "^6.10.1",

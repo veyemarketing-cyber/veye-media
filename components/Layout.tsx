@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useLocation, Outlet } from 'react-router-dom';
-import { Analytics } from '@vercel/analytics/react';
 import { Logo } from './Logo'; 
 
 declare global {
@@ -13,6 +12,7 @@ export default function Layout() {
   const location = useLocation();
 
   useEffect(() => {
+    // Standard GA4 tracking - This remains your primary analytics source
     if (typeof window.gtag === 'function') {
       window.gtag('config', 'G-HXRX9SQ2GY', {
         page_path: location.pathname,
@@ -22,14 +22,13 @@ export default function Layout() {
 
   return (
     <>
-      {/* Keep your main content here. 
-         The white screen was likely a "hang" while waiting for the Tailwind CDN. 
-      */}
       <main style={{ minHeight: '70vh' }}>
         <Outlet />
       </main>
       
-      <Analytics />
+      {/* Vercel Analytics removed to prevent local build issues and white-screen errors. 
+          Tracking is now handled via the GA4 logic above and GTM. 
+      */}
     </>
   );
 }

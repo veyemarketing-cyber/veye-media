@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
-import Layout  from './components/Layout';
+import Layout from './components/Layout';
 import { Home } from './pages/Home';
 import { VelocitySync } from './pages/VelocitySync';
 import { SystemsWeBuild } from './pages/SystemsWeBuild';
@@ -27,11 +27,9 @@ const GtmListener: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Correctly captures the HashRouter path (e.g., /velocity-sync)
     const hash = typeof window !== 'undefined' ? window.location.hash || '' : '';
     const page_path = hash.startsWith('#') ? hash.slice(1) : (location.pathname + location.search);
 
-    // 1. Existing dataLayer push
     (window as any).dataLayer = (window as any).dataLayer || [];
     (window as any).dataLayer.push({
       event: 'virtual_pageview',
@@ -39,7 +37,6 @@ const GtmListener: React.FC = () => {
       page_title: typeof document !== 'undefined' ? document.title : 'Veye Media',
     });
 
-    // 2. DIRECT GA4 PUSH (This is what clears the error)
     if ((window as any).gtag) {
       (window as any).gtag('config', 'G-HXRX9SQ2GY', {
         page_path: page_path,
@@ -54,8 +51,12 @@ const App: React.FC = () => {
   return (
     <HashRouter>
       <GtmListener />
-      <Layout>
-        <Routes>
+      <Routes>
+        {/* Standard React Router v7 Pattern: 
+            The Layout component now acts as a parent route. 
+            All child routes will be rendered inside the Layout's <Outlet />.
+        */}
+        <Route element={<Layout />}>
           <Route path={Page.Home} element={<Home />} />
           <Route path={Page.VelocitySync} element={<VelocitySync />} />
           <Route path={Page.SystemsWeBuild} element={<SystemsWeBuild />} />
@@ -72,8 +73,8 @@ const App: React.FC = () => {
           <Route path={Page.TermsOfUse} element={<TermsOfUse />} />
           <Route path={Page.DataGovernance} element={<DataGovernance />} />
           <Route path={Page.Sitemap} element={<Sitemap />} />
-        </Routes>
-      </Layout>
+        </Route>
+      </Routes>
     </HashRouter>
   );
 };
