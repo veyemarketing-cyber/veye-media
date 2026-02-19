@@ -19,29 +19,41 @@ import { DataGovernance } from './pages/DataGovernance';
 import { Sitemap } from './pages/Sitemap';
 import { Page } from './types';
 
+// Declare gtag on the window object to match existing TypeScript definitions
+declare global {
+  interface Window {
+    gtag: (...args: any[]) => void;
+    dataLayer: any[];
+  }
+}
+
 /**
- * GTM listener for SPA navigation (HashRouter).
- * Pushes a virtual_pageview event on route changes so GA4 can track pageviews.
+ * GTM/GA4 listener for SPA navigation (HashRouter).
+ * Sends a manual page_view event on route changes.
  */
 const GtmListener: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const hash = typeof window !== 'undefined' ? window.location.hash || '' : '';
+    // 1. Capture the path from HashRouter (e.g., #/SystemsWeBuild -> /SystemsWeBuild)
+    const hash = window.location.hash || '';
     const page_path = hash.startsWith('#') ? hash.slice(1) : (location.pathname + location.search);
 
-    (window as any).dataLayer = (window as any).dataLayer || [];
-    (window as any).dataLayer.push({
-      event: 'virtual_pageview',
-      page_path,
-      page_title: typeof document !== 'undefined' ? document.title : 'Veye Media',
-    });
-
-    if ((window as any).gtag) {
-      (window as any).gtag('config', 'G-HXRX9SQ2GY', {
+    // 2. Send the hit to the NEW Veye Media account (G-EYT9HCKXEL)
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', 'page_view', {
         page_path: page_path,
+        page_title: document.title || 'Veye Media',
+        send_to: 'G-EYT9HCKXEL' 
       });
     }
+
+    // 3. Keep dataLayer update for custom triggers
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'virtual_pageview',
+      page_path,
+    });
   }, [location]);
 
   return null;
@@ -52,10 +64,6 @@ const App: React.FC = () => {
     <HashRouter>
       <GtmListener />
       <Routes>
-        {/* Standard React Router v7 Pattern: 
-            The Layout component now acts as a parent route. 
-            All child routes will be rendered inside the Layout's <Outlet />.
-        */}
         <Route element={<Layout />}>
           <Route path={Page.Home} element={<Home />} />
           <Route path={Page.VelocitySync} element={<VelocitySync />} />

@@ -1,34 +1,32 @@
-import { useEffect } from 'react';
-import { useLocation, Outlet } from 'react-router-dom';
-import { Logo } from './Logo'; 
+import { Outlet } from 'react-router-dom';
+import { Navbar } from './Navbar'; 
+import { Footer } from './Footer';
+import { ChatAssistant } from './ChatAssistant';
 
-declare global {
-  interface Window {
-    gtag: (...args: any[]) => void;
-  }
-}
-
+/**
+ * Main layout component for Veye Media.
+ * Provides the consistent structure (Navbar, Footer, Chat) 
+ * across all internal routes.
+ */
 export default function Layout() {
-  const location = useLocation();
-
-  useEffect(() => {
-    // Standard GA4 tracking - This remains your primary analytics source
-    if (typeof window.gtag === 'function') {
-      window.gtag('config', 'G-HXRX9SQ2GY', {
-        page_path: location.pathname,
-      });
-    }
-  }, [location]); 
-
   return (
-    <>
-      <main style={{ minHeight: '70vh' }}>
+    <div className="flex flex-col min-h-screen">
+      {/* Navigation at the top */}
+      <Navbar /> 
+      
+      {/* Main content area: 
+          The <Outlet /> component renders the specific page 
+          matched by the router (Home, VelocitySync, etc.) 
+      */}
+      <main className="flex-grow">
         <Outlet />
       </main>
       
-      {/* Vercel Analytics removed to prevent local build issues and white-screen errors. 
-          Tracking is now handled via the GA4 logic above and GTM. 
-      */}
-    </>
+      {/* VSE Powered Chat Assistant */}
+      <ChatAssistant /> 
+      
+      {/* Site Footer */}
+      <Footer />
+    </div>
   );
 }
