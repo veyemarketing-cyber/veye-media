@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Activity, Zap, ShieldCheck, ArrowRight, RefreshCw, Cpu, GitMerge } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -7,7 +6,26 @@ import { Page } from '../types';
 export const VelocitySync: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 animate-in zoom-in-95 duration-700 bg-white">
-      {/* Header Section with Side Visual */}
+      {/* Custom Styles for Glow and Scrollbar Removal */}
+      <style>{`
+        @keyframes slow-glow {
+          0%, 100% { box-shadow: 0 0 5px rgba(196, 117, 0, 0.2); }
+          50% { box-shadow: 0 0 20px rgba(196, 117, 0, 0.5); }
+        }
+        .animate-slow-glow {
+          animation: slow-glow 3s ease-in-out infinite;
+        }
+        /* Custom class to hide potential scrollbars while maintaining functionality */
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
+
+      {/* Header Section with Integrated Calendly Embed */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start mb-32">
         <div>
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-veye-blue/5 border border-veye-blue/10 text-veye-blue text-xs font-bold mb-10 uppercase tracking-[0.2em]">
@@ -29,20 +47,24 @@ export const VelocitySync: React.FC = () => {
           </div>
         </div>
         
-        {/* Page Visual Element */}
-        <div className="relative pt-12">
-          <div className="aspect-square bg-slate-50 rounded-[4rem] border border-slate-100 flex items-center justify-center p-10 overflow-hidden shadow-inner">
-            <div className="w-full h-full bg-veye-navy rounded-[3rem] shadow-2xl relative flex items-center justify-center group overflow-hidden">
-               <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-veye-blue via-transparent to-transparent"></div>
-               <div className="flex flex-col items-center gap-6 relative z-10">
-                 <div className="p-6 bg-veye-blue/20 rounded-2xl border border-white/10 animate-pulse">
-                   <Activity size={80} className="text-white" />
-                 </div>
-                 <GitMerge size={48} className="text-veye-amber" />
-               </div>
-               <div className="absolute top-0 left-0 w-full h-full border-4 border-dashed border-white/5 rounded-[3rem] animate-[spin_20s_linear_infinite]"></div>
-            </div>
+        {/* NO-SCROLL CALENDAR COLUMN */}
+        <div className="relative pt-4">
+          <div 
+  className="rounded-[3rem] border border-slate-200 relative z-10 bg-white p-[1px] animate-slow-glow no-scrollbar overflow-hidden"
+  style={{ height: '800px', backgroundColor: '#FFFFFF' }} // Explicitly set background
+>
+            <iframe
+              src="https://calendly.com/victor-veyemedia/30min?hide_landing_page_details=1&primary_color=c47500"
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              title="VSE Demo Scheduler"
+              className="rounded-[3rem]"
+            ></iframe>
           </div>
+          
+          {/* Subtle brand amber #c47500 glow behind the snug container */}
+          <div className="absolute -inset-4 bg-[#c47500]/10 blur-3xl rounded-[4rem] -z-10 animate-pulse"></div>
         </div>
       </div>
 
