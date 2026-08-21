@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { View } from '../types';
 import { SERVICES_DATA } from '../constants';
@@ -60,39 +59,39 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ onNavigate, onClose }) => {
 
           {/* Featured Side Panel (Right Column) */}
           <div className="p-10 bg-secondary text-white relative overflow-hidden flex flex-col justify-between">
-             <div className="absolute inset-0 bg-gradient-to-br from-primary-900/40 to-accent/10 pointer-events-none"></div>
-             
-             <div className="relative z-10">
-                <div className="inline-flex items-center gap-2 px-2 py-1 bg-white/10 rounded-lg text-[9px] font-bold uppercase tracking-widest text-primary-300 mb-6 border border-white/10">
-                  <Icon name="Zap" size={10} /> Flagship Engine
+            <div className="absolute inset-0 bg-gradient-to-br from-primary-900/40 to-accent/10 pointer-events-none"></div>
+            
+            <div className="relative z-10">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-white/10 rounded-lg text-[9px] font-bold uppercase tracking-widest text-primary-300 mb-6 border border-white/10">
+                <Icon name="Zap" size={10} /> Architecture Core
+              </div>
+              <h4 className="text-3xl font-extrabold mb-4 leading-tight">
+                Active <br/>Autonomy™.
+              </h4>
+              <p className="text-slate-300 text-sm leading-relaxed mb-8">
+                Deploy coordinated enterprise intelligence that senses signals, reasons across silos, and executes governed actions under Human-on-the-loop oversight.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 text-sm text-slate-300">
+                  <Icon name="ShieldCheck" size={16} className="text-primary-400 shrink-0" />
+                  <span>Continuous Signal Monitoring</span>
                 </div>
-                <h4 className="text-3xl font-extrabold mb-4 leading-tight">
-                  Intelligent <br/>Growth Stack.
-                </h4>
-                <p className="text-slate-400 text-sm leading-relaxed mb-8">
-                  Deploy autonomous agents that proactively manage your visibility, engagement, and conversion without human oversight.
-                </p>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 text-sm text-slate-300">
-                    <Icon name="Check" size={16} className="text-primary-500" />
-                    <span>24/7 Signal Monitoring</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-300">
-                    <Icon name="Check" size={16} className="text-primary-500" />
-                    <span>Predictive Budget Logic</span>
-                  </div>
+                <div className="flex items-center gap-3 text-sm text-slate-300">
+                  <Icon name="ShieldCheck" size={16} className="text-primary-400 shrink-0" />
+                  <span>Governance-as-Code Enforcement</span>
                 </div>
-             </div>
+              </div>
+            </div>
 
-             <div className="relative z-10 mt-12">
-                <button 
-                  onClick={handleAuditClick}
-                  className="w-full py-4 px-6 bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-2xl transition-all shadow-2xl shadow-black/30 flex items-center justify-center gap-2 group"
-                >
-                  Start System Audit
-                  <Icon name="ArrowRight" size={18} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-             </div>
+            <div className="relative z-10 mt-12">
+              <button 
+                onClick={handleAuditClick}
+                className="w-full py-4 px-6 bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-2xl transition-all shadow-2xl shadow-black/30 flex items-center justify-center gap-2 group"
+              >
+                <span>Talk With Veye Media</span>
+                <Icon name="ArrowRight" size={18} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
           </div>
 
         </div>
