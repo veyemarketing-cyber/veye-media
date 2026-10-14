@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+/*
+ * Explicitly scan the Veye Media application source.
+ * This protects utility generation for the React/TypeScript files.
+ */
+@source "./**/*.{html,js,ts,jsx,tsx}";
+
+/* Veye Media Tailwind v4 theme */
+@theme {
+  --font-sans: "Inter", sans-serif;
+
+  --color-primary: #008dd3;
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #008dd3;
+  --color-primary-600: #007bb8;
+  --color-primary-700: #00699d;
+  --color-primary-800: #005782;
+  --color-primary-900: #004567;
+
+  --color-secondary: #00205b;
+  --color-secondary-hover: #001a4a;
+
+  --color-accent: #ab7105;
+  --color-accent-light: #c28106;
+
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+body {
+  background-color: #ffffff;
+  color: #0f172a;
+}

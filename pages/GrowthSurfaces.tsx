@@ -1,148 +1,179 @@
 
-import React from 'react';
-import { Search, MapPin, TrendingUp, Share2, Database, Zap, Radio, ArrowRight, ShieldCheck, Activity } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Page } from '../types';
+import React, { useState, useEffect } from 'react';
+import { View } from '../types';
+import { Icon } from '../components/Icon';
+import { generateBrandImage } from '../services/geminiService';
+import { EditableText } from '../components/EditableText';
 
-const SurfaceLayer = ({ title, icon, desc }: { title: string, icon: React.ReactNode, desc: string }) => (
-  <div className="p-10 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all group text-left">
-    <div className="w-14 h-14 bg-veye-blue/10 text-veye-blue rounded-2xl flex items-center justify-center mb-8 group-hover:bg-veye-blue group-hover:text-white transition-all">
-      {icon}
-    </div>
-    <h3 className="text-2xl font-bold mb-4 text-veye-navy">{title}</h3>
-    <p className="text-slate-600 leading-relaxed font-medium text-sm">{desc}</p>
-  </div>
-);
+interface GrowthSurfacesProps {
+  onNavigate: (view: View) => void;
+}
 
-export const GrowthSurfaces: React.FC = () => {
+export const GrowthSurfaces: React.FC<GrowthSurfacesProps> = ({ onNavigate }) => {
+  const [heroImage, setHeroImage] = useState<string | null>(null);
+  const [midImage, setMidImage] = useState<string | null>(null);
+  const [loadingStates, setLoadingStates] = useState({ hero: true, mid: true });
+
+  useEffect(() => {
+    const fetchImages = async () => {
+      // IMAGE_A: Hero Image
+      generateBrandImage("Abstract visualization of interconnected geometric planes and light paths, representing multi-dimensional growth surfaces. Professional, high-tech, deep blue and gold aesthetic.")
+        .then(img => {
+          if (img) setHeroImage(img);
+          setLoadingStates(prev => ({ ...prev, hero: false }));
+        });
+
+      // IMAGE_B: Mid-page Image
+      generateBrandImage("Abstract core emitting light that synchronizes various surrounding nodes, representing central intelligence orchestration. Minimalist, premium enterprise style.")
+        .then(img => {
+          if (img) setMidImage(img);
+          setLoadingStates(prev => ({ ...prev, mid: false }));
+        });
+    };
+
+    fetchImages();
+  }, []);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 animate-in slide-in-from-right-4 duration-1000 bg-white">
-      {/* Hero Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start mb-32">
-        <div>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-veye-blue/5 border border-veye-blue/10 text-veye-blue text-xs font-bold mb-10 uppercase tracking-[0.2em]">
-            Unified Architecture
-          </div>
-          <h1 className="text-5xl lg:text-7xl font-extrabold mb-10 tracking-tighter text-veye-navy leading-tight">
-            Digital Growth Surfaces: <br /> <span className="text-veye-blue">A Unified Growth Architecture</span>
-          </h1>
-          <p className="text-3xl font-bold italic text-veye-navy/80 mb-12">
-            Beyond Channels, Toward Intelligent Systems
-          </p>
-          <div className="space-y-8 text-xl text-slate-600 leading-relaxed font-medium">
-            <p>
-              The conventional approach to digital growth—managing discrete channels like SEO, advertising, and social media—is fundamentally flawed. It creates fragmentation, impedes insight, and limits potential.
-            </p>
-            <p>
-              True market leadership is achieved not by optimizing isolated tactics, but by architecting a single, intelligent system where all digital interactions function as integrated growth surfaces.
-            </p>
-            <p>
-              This is the architecture of unified growth. It moves beyond channel-based thinking to orchestrate a seamless interplay of discovery, influence, and relationships. When these surfaces are governed by a single system, the result is a self-reinforcing ecosystem that drives perpetual momentum.
-            </p>
-          </div>
-        </div>
+    <div className="animate-fade-in bg-white min-h-screen">
+      {/* HERO SECTION */}
+      <section className="relative pt-32 pb-24 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-50 border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+            <div className="order-2 lg:order-1">
+              <span className="text-primary-500 font-bold uppercase tracking-[0.2em] text-xs mb-4 block">
+                <EditableText section="growthSurfaces" field="heroEyebrow" />
+              </span>
+              <h1 className="text-4xl md:text-7xl font-black text-secondary tracking-tighter mb-6 leading-[0.95]">
+                <EditableText section="growthSurfaces" field="heroHeadline" />
+              </h1>
+              <h2 className="text-xl md:text-2xl font-bold text-slate-700 mb-8 leading-snug">
+                <EditableText section="growthSurfaces" field="heroSubheadline" multiline />
+              </h2>
+              <p className="text-lg text-slate-500 leading-relaxed mb-12 max-w-xl font-medium">
+                <EditableText section="growthSurfaces" field="heroSupportingParagraph" multiline />
+              </p>
+              <div className="flex flex-col sm:flex-row gap-6">
+                <button 
+                  onClick={() => onNavigate(View.AUDIT)}
+                  className="px-10 py-5 bg-secondary text-white font-extrabold rounded-2xl hover:bg-secondary-hover transition-all shadow-2xl shadow-secondary/20 flex items-center justify-center gap-2 group"
+                >
+                  <EditableText section="growthSurfaces" field="heroCtaPrimaryText" />
+                  <Icon name="ArrowRight" size={20} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+                <button 
+                  onClick={() => onNavigate(View.SOLUTIONS)}
+                  className="px-10 py-5 bg-white border-2 border-slate-200 text-secondary font-bold rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center"
+                >
+                  <EditableText section="growthSurfaces" field="heroCtaSecondaryText" />
+                </button>
+              </div>
+            </div>
 
-        {/* Page Visual Element */}
-        <div className="relative pt-12">
-          <div className="aspect-square bg-slate-50 rounded-[4rem] border border-slate-100 flex items-center justify-center p-10 overflow-hidden shadow-inner">
-            <div className="w-full h-full bg-veye-navy rounded-[3rem] shadow-2xl relative flex items-center justify-center group">
-               <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-               <div className="relative z-10">
-                 <div className="relative w-56 h-56">
-                   <div className="absolute inset-0 border-2 border-dashed border-veye-blue/40 rounded-full animate-[spin_15s_linear_infinite]"></div>
-                   <div className="absolute inset-8 border-2 border-veye-amber/30 rounded-full animate-[spin_10s_linear_infinite_reverse]"></div>
-                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                     <Radio className="text-white animate-pulse" size={64} />
-                     <span className="text-[10px] font-extrabold text-veye-blue uppercase tracking-widest">Active Surfaces</span>
-                   </div>
-                 </div>
-               </div>
-               {/* Orbital Icons */}
-               <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 p-3 bg-white/5 border border-white/10 rounded-xl text-veye-blue animate-bounce">
-                  <Activity size={24} />
-               </div>
-               <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 p-3 bg-white/5 border border-white/10 rounded-xl text-veye-amber animate-bounce delay-75">
-                  <Zap size={24} />
-               </div>
+            <div className="order-1 lg:order-2 relative">
+              {loadingStates.hero ? (
+                <div className="w-full aspect-video bg-slate-200 rounded-[3rem] animate-pulse flex items-center justify-center">
+                  <Icon name="Loader2" className="animate-spin text-slate-400" size={32} />
+                </div>
+              ) : heroImage ? (
+                <div className="rounded-[3rem] overflow-hidden shadow-3xl border border-slate-100">
+                  <img src={heroImage} alt="Interconnected geometric planes" className="w-full h-auto object-cover" />
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Surface Philosophy Section */}
-      <section className="py-24 bg-slate-50 rounded-[4rem] border border-slate-100 mb-32 p-12 lg:p-20 shadow-inner text-left">
-        <h2 className="text-4xl font-bold text-veye-navy mb-8 tracking-tight italic">The Surfaces of an Integrated System</h2>
-        <p className="text-xl text-slate-600 leading-relaxed font-medium mb-16 max-w-4xl">
-          Within this unified architecture, individual functions are no longer separate channels but interconnected layers, each amplifying the intelligence and impact of the whole.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <SurfaceLayer 
-            title="Search & Algorithmic Discovery (SEO & AEO)"
-            icon={<Search size={28} />}
-            desc="This surface ensures persistent visibility across search and algorithmic environments. It is not about rankings but about engineering discoverability at the precise moments of intent, making the entire system accessible to high-value audiences."
-          />
-          <SurfaceLayer 
-            title="Geographic Intelligence (GEO)"
-            icon={<MapPin size={28} />}
-            desc="A dynamic layer that provides locational context, allowing the system to adapt strategies with market-specific precision. It localizes the entire growth effort, ensuring relevance and resonance across diverse territories."
-          />
-          <SurfaceLayer 
-            title="Paid Amplification (Ads)"
-            icon={<TrendingUp size={28} />}
-            desc="A strategic surface for accelerating the system’s reach and influence. It doesn't just broadcast messages; it injects velocity and captures critical data, feeding insights back into the core architecture for continuous refinement."
-          />
-          <SurfaceLayer 
-            title="Social & Network Engagement"
-            icon={<Share2 size={28} />}
-            desc="The connective fabric that transforms passive interactions into durable relationships and advocacy. This surface cultivates and distributes social capital, turning audience engagement into a strategic asset."
-          />
-          <SurfaceLayer 
-            title="Customer Intelligence (CRM)"
-            icon={<Database size={28} />}
-            desc="The central intelligence layer that informs every touchpoint across all surfaces. It ensures every interaction is personalized, coherent, and aligned with overarching growth objectives, transforming data into institutional knowledge."
-          />
-          <div className="p-10 bg-veye-navy text-white rounded-[2.5rem] flex flex-col justify-center relative overflow-hidden shadow-2xl group">
-            <div className="absolute inset-0 bg-veye-blue/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <ShieldCheck className="text-veye-blue mb-6" size={48} />
-            <h3 className="text-2xl font-bold mb-4 italic">Sovereign Orchestration</h3>
-            <p className="text-indigo-100 text-sm leading-relaxed font-medium">Every surface is governed by the Velocity Sync Engine™ for absolute synchronization.</p>
-          </div>
+      {/* SECTION_1: unified-architecture */}
+      <section id="unified-architecture" className="py-24 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+           <h3 className="text-3xl md:text-5xl font-black text-secondary mb-8">
+              <EditableText section="growthSurfaces" field="section1Heading" />
+           </h3>
+           <p className="text-xl text-slate-500 leading-relaxed font-medium">
+              <EditableText section="growthSurfaces" field="section1Paragraph" multiline />
+           </p>
         </div>
       </section>
 
-      {/* Outcome Section */}
-      <section className="mb-32 text-left max-w-4xl mx-auto">
-        <h2 className="text-4xl font-bold text-veye-navy mb-10 tracking-tight italic">The Outcome: A Self-Sustaining Ecosystem</h2>
-        <div className="space-y-8 text-xl text-slate-600 leading-relaxed font-medium">
-          <p>
-            When these surfaces are orchestrated by a singular intelligence, they create an exponential effect. Data flows frictionlessly, insights are shared in real time, and every action is informed by the collective wisdom of the system.
-          </p>
-          <p>
-            Growth ceases to be a series of campaigns and becomes a continuous, adaptive, and self-sustaining capability.
-          </p>
-          <p className="text-veye-navy font-bold text-2xl italic">
-            This is growth, reimagined as intelligent infrastructure.
-          </p>
+      {/* SECTION_2: surfaces */}
+      <section id="surfaces" className="py-32 bg-slate-50 border-y border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-16">
+          <h3 className="text-3xl md:text-5xl font-black text-secondary mb-8">
+            <EditableText section="growthSurfaces" field="section2Heading" />
+          </h3>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+           {[1, 2, 3, 4, 5].map((num) => (
+              <div key={num} className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100 group hover:shadow-2xl transition-all">
+                <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center text-primary-500 mb-6 group-hover:bg-primary-500 group-hover:text-white transition-all">
+                  <Icon name={num === 1 ? 'Search' : num === 2 ? 'MapPin' : num === 3 ? 'Target' : num === 4 ? 'Share2' : 'Database'} size={24} />
+                </div>
+                <h4 className="text-xl font-bold text-secondary mb-4">
+                  <EditableText section="growthSurfaces" field={`surface${num}Name`} />
+                </h4>
+                <p className="text-slate-500 leading-relaxed">
+                  <EditableText section="growthSurfaces" field={`surface${num}Desc`} multiline />
+                </p>
+              </div>
+           ))}
         </div>
       </section>
 
-      {/* Call to Action */}
-      <div className="p-16 lg:p-32 bg-veye-navy text-white rounded-[4rem] text-center relative overflow-hidden mb-32 shadow-2xl">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-veye-blue/20 blur-[120px] rounded-full -z-0"></div>
-        <div className="relative z-10 max-w-4xl mx-auto">
-          <h2 className="text-4xl lg:text-6xl font-extrabold mb-10 tracking-tight italic">Start a Conversation</h2>
-          <p className="text-xl text-indigo-100 leading-relaxed font-medium mb-12">
-            We invite you to engage in a strategic dialogue about system intelligence and growth architecture. Connect with us to explore the possibilities a unified, intelligent system can unlock for your organization.
-          </p>
-          <Link 
-            to={Page.StartConversation} 
-            className="inline-flex items-center gap-3 px-12 py-6 bg-veye-blue hover:bg-veye-blue/90 text-white rounded-full font-bold transition-all text-xl shadow-2xl shadow-veye-blue/20"
-          >
-            Initiate Discovery Dialogue <ArrowRight size={24} />
-          </Link>
+      {/* SECTION_3: outcome */}
+      <section id="outcome" className="py-32 bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+              <div className="relative">
+                {loadingStates.mid ? (
+                  <div className="w-full aspect-video bg-slate-100 rounded-[3rem] animate-pulse flex items-center justify-center">
+                    <Icon name="Loader2" className="animate-spin text-slate-300" size={32} />
+                  </div>
+                ) : midImage ? (
+                  <div className="rounded-[3rem] overflow-hidden shadow-3xl border border-slate-100">
+                    <img src={midImage} alt="Central intelligence layer" className="w-full h-auto object-cover" />
+                  </div>
+                ) : null}
+                <div className="absolute -top-12 -left-12 w-64 h-64 bg-accent/10 rounded-full blur-[100px] pointer-events-none"></div>
+              </div>
+
+              <div>
+                <h3 className="text-3xl md:text-5xl font-black text-secondary mb-12">
+                   <EditableText section="growthSurfaces" field="section3Heading" />
+                </h3>
+                <p className="text-xl text-slate-500 leading-relaxed font-medium">
+                  <EditableText section="growthSurfaces" field="section3Paragraph" multiline />
+                </p>
+              </div>
+           </div>
         </div>
-      </div>
+      </section>
+
+      {/* SECTION_4: invitation */}
+      <section id="invitation" className="py-32 bg-slate-50 border-t border-slate-100 text-center">
+        <div className="max-w-4xl mx-auto px-4">
+           <h3 className="text-3xl md:text-6xl font-black text-secondary mb-8 tracking-tighter">
+             <EditableText section="growthSurfaces" field="section4Heading" />
+           </h3>
+           <p className="text-xl md:text-2xl text-slate-500 font-medium leading-relaxed mb-12">
+             <EditableText section="growthSurfaces" field="section4Paragraph" multiline />
+           </p>
+           
+           <div className="p-10 bg-white rounded-[2.5rem] shadow-xl border border-slate-100 max-w-2xl mx-auto">
+             <p className="text-lg font-bold text-primary-600 uppercase tracking-widest mb-10">
+                <EditableText section="growthSurfaces" field="section4CtaLine" />
+             </p>
+             <button
+              onClick={() => onNavigate(View.AUDIT)}
+              className="px-12 py-6 rounded-2xl bg-secondary text-white font-extrabold text-2xl hover:bg-secondary-hover transition-all shadow-3xl shadow-secondary/20 flex items-center gap-4 mx-auto group"
+             >
+               Initialize Dialogue
+               <Icon name="ArrowRight" size={28} className="group-hover:translate-x-2 transition-transform" />
+             </button>
+           </div>
+        </div>
+      </section>
     </div>
   );
 };

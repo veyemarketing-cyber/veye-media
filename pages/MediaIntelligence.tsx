@@ -1,136 +1,192 @@
-import React from 'react';
-import { Volume2, Mic2, Waves, Activity, PlayCircle, Music, ArrowRight, Zap, Target, Share2, Database, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Page } from '../types';
 
-const ResonanceFeature = ({ title, icon, desc }: { title: string, icon: React.ReactNode, desc: string }) => (
-  <div className="p-10 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all group text-left">
-    <div className="w-14 h-14 bg-veye-blue/10 text-veye-blue rounded-2xl flex items-center justify-center mb-8 group-hover:bg-veye-blue group-hover:text-white transition-all">
-      {icon}
-    </div>
-    <h3 className="text-2xl font-bold mb-4 text-veye-navy">{title}</h3>
-    <p className="text-slate-600 leading-relaxed font-medium text-sm">{desc}</p>
-  </div>
-);
+import React, { useState, useEffect } from 'react';
+import { View } from '../types';
+import { Icon } from '../components/Icon';
+import { generateBrandImage } from '../services/geminiService';
+import { EditableText } from '../components/EditableText';
 
-export const MediaIntelligence: React.FC = () => {
+interface MediaIntelligenceProps {
+  onNavigate: (view: View) => void;
+}
+
+export const MediaIntelligence: React.FC<MediaIntelligenceProps> = ({ onNavigate }) => {
+  const [heroImage, setHeroImage] = useState<string | null>(null);
+  const [midImage, setMidImage] = useState<string | null>(null);
+  const [loadingStates, setLoadingStates] = useState({ hero: true, mid: true });
+
+  useEffect(() => {
+    const fetchImages = async () => {
+      // IMAGE_A: Hero Image
+      generateBrandImage("Abstract visualization of sound waves and light frequencies merging into a structured crystalline pattern. Professional, high-tech, deep blue and gold aesthetic.")
+        .then(img => {
+          if (img) setHeroImage(img);
+          setLoadingStates(prev => ({ ...prev, hero: false }));
+        });
+
+      // IMAGE_B: Mid-page Image
+      generateBrandImage("A vast, deep blue horizon with subtle light streams representing global signal reach and narrative authority. Minimalist, premium enterprise style.")
+        .then(img => {
+          if (img) setMidImage(img);
+          setLoadingStates(prev => ({ ...prev, mid: false }));
+        });
+    };
+
+    fetchImages();
+  }, []);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 animate-in fade-in duration-1000 bg-white">
-      {/* Hero Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start mb-32">
-        <div>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-veye-blue/5 border border-veye-blue/10 text-veye-blue text-xs font-bold mb-10 uppercase tracking-[0.2em]">
-            Resonant Frequencies
-          </div>
-          <h1 className="text-5xl lg:text-7xl font-extrabold mb-10 tracking-tighter text-veye-navy leading-tight">
-            Media & Audio <br /> <span className="text-veye-blue">Intelligence</span>
-          </h1>
-          <p className="text-3xl font-bold italic text-veye-navy/80 mb-12">
-            Resonant Outputs of an Intelligent System
-          </p>
-          <div className="space-y-8 text-xl text-slate-600 leading-relaxed font-medium">
-            <p>
-              In a fragmented digital ecosystem, media is often reduced to static assets—files to be uploaded, clips to be posted, and audio to be streamed. This transactional view fails to capture the latent potential of media as a strategic growth surface.
-            </p>
-            <p>
-              We redefine media and audio not as isolated creative artifacts, but as dynamic outputs of an intelligent growth infrastructure. They are the resonant frequencies of your system, engineered to transmit value, amplify influence, and create durable connections at scale.
-            </p>
-            <p>
-              When integrated into a growth architecture, media ceases to be mere content. It becomes a sophisticated data instrument—a mechanism for sensing market sentiment and broadcasting authority with algorithmic precision.
-            </p>
-          </div>
-        </div>
+    <div className="animate-fade-in bg-white min-h-screen">
+      {/* HERO SECTION */}
+      <section className="relative pt-32 pb-24 lg:pt-48 lg:pb-32 overflow-hidden bg-slate-50 border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+            <div className="order-2 lg:order-1">
+              <span className="text-primary-500 font-bold uppercase tracking-[0.2em] text-xs mb-4 block">
+                <EditableText section="mediaIntelligence" field="heroEyebrow" />
+              </span>
+              <h1 className="text-4xl md:text-7xl font-black text-secondary tracking-tighter mb-6 leading-[0.95]">
+                <EditableText section="mediaIntelligence" field="heroHeadline" />
+              </h1>
+              <h2 className="text-xl md:text-2xl font-bold text-slate-700 mb-8 leading-snug">
+                <EditableText section="mediaIntelligence" field="heroSubheadline" multiline />
+              </h2>
+              <p className="text-lg text-slate-500 leading-relaxed mb-12 max-w-xl font-medium">
+                <EditableText section="mediaIntelligence" field="heroSupportingParagraph" multiline />
+              </p>
+              <div className="flex flex-col sm:flex-row gap-6">
+                <button 
+                  onClick={() => onNavigate(View.AUDIT)}
+                  className="px-10 py-5 bg-secondary text-white font-extrabold rounded-2xl hover:bg-secondary-hover transition-all shadow-2xl shadow-secondary/20 flex items-center justify-center gap-2 group"
+                >
+                  <EditableText section="mediaIntelligence" field="heroCtaPrimaryText" />
+                  <Icon name="ArrowRight" size={20} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+                <button 
+                  onClick={() => onNavigate(View.SOLUTIONS)}
+                  className="px-10 py-5 bg-white border-2 border-slate-200 text-secondary font-bold rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center"
+                >
+                  <EditableText section="mediaIntelligence" field="heroCtaSecondaryText" />
+                </button>
+              </div>
+            </div>
 
-        {/* Page Visual Element */}
-        <div className="relative pt-12">
-          <div className="aspect-square bg-slate-50 rounded-[4rem] border border-slate-100 flex items-center justify-center p-10 overflow-hidden shadow-inner">
-            <div className="w-full h-full bg-veye-navy rounded-[3rem] shadow-2xl relative flex items-center justify-center group overflow-hidden">
-               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-veye-blue/20 via-transparent to-transparent opacity-50"></div>
-               <div className="flex gap-3 items-end h-48 relative z-10 p-12">
-                 {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                   <div 
-                     key={i} 
-                     className="w-4 bg-veye-blue rounded-full animate-pulse transition-all duration-500" 
-                     style={{ 
-                       height: `${30 + Math.random() * 70}%`, 
-                       animationDelay: `${i * 0.15}s`,
-                       opacity: 0.6 + (i * 0.05)
-                     }}
-                   ></div>
-                 ))}
-               </div>
-               <Waves className="absolute bottom-10 left-10 text-veye-blue/10 animate-pulse" size={160} />
-               <div className="absolute top-10 right-10 p-4 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-sm">
-                  <Activity size={32} className="text-veye-blue" />
-               </div>
+            <div className="order-1 lg:order-2 relative">
+              {loadingStates.hero ? (
+                <div className="w-full aspect-video bg-slate-200 rounded-[3rem] animate-pulse flex items-center justify-center">
+                  <Icon name="Loader2" className="animate-spin text-slate-400" size={32} />
+                </div>
+              ) : heroImage ? (
+                <div className="rounded-[3rem] overflow-hidden shadow-3xl border border-slate-100">
+                  <img src={heroImage} alt="Resonant sound waves visualization" className="w-full h-auto object-cover" />
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Philosophy Section */}
-      <section className="py-24 bg-slate-50 rounded-[4rem] border border-slate-100 mb-32 p-12 lg:p-20 shadow-inner text-left">
-        <h2 className="text-4xl font-bold text-veye-navy mb-8 tracking-tight italic">The Architecture of Resonance</h2>
-        <p className="text-xl text-slate-600 leading-relaxed font-medium mb-16 max-w-4xl">
-          An intelligent system does not simply "produce" media; it generates resonance. By treating audio and visual outputs as integrated components of your growth engine, we transform them into adaptive signals that align perfectly with market intent and organizational objectives.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <ResonanceFeature 
-            title="Dynamic Signal Adaptation"
-            icon={<Zap size={28} />}
-            desc="Your growth system continuously analyzes the digital environment, ensuring that every piece of media—from long-form audio to visual narratives—is calibrated for maximum impact. The output is not static; it is responsive, adjusting to the nuance of audience behavior and platform dynamics."
-          />
-          <ResonanceFeature 
-            title="Amplified Authority"
-            icon={<ShieldCheck size={28} />}
-            desc="Media becomes the vehicle through which your system asserts leadership. By integrating audio intelligence into the core infrastructure, voice and narrative are no longer ephemeral. They become persistent assets that build cumulative trust and establish unassailable market positioning."
-          />
-          <ResonanceFeature 
-            title="Scalable Engagement Vectors"
-            icon={<Target size={28} />}
-            desc="Traditional media strategies bottleneck at production. An intelligent system eliminates these constraints by treating media as a scalable vector for engagement. Audio and visual outputs are deployed as strategic touchpoints, creating an immersive ecosystem that surrounds and nurtures your audience."
-          />
-          <ResonanceFeature 
-            title="Data-Driven Feedback Loops"
-            icon={<Database size={28} />}
-            desc="Every interaction with your media—every listen, view, and share—feeds intelligence back into the central system. This creates a continuous loop of refinement, where the performance of past outputs informs the strategy of future signals, ensuring perpetual optimization."
-          />
+      {/* SECTION_1: media-as-system-output */}
+      <section id="media-as-system-output" className="py-24 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+           <h3 className="text-3xl md:text-5xl font-black text-secondary mb-8">
+              <EditableText section="mediaIntelligence" field="section1Heading" />
+           </h3>
+           <p className="text-xl text-slate-500 leading-relaxed font-medium">
+              <EditableText section="mediaIntelligence" field="section1Paragraph" multiline />
+           </p>
         </div>
       </section>
 
-      {/* Concluding Section */}
-      <section className="mb-32 text-left max-w-4xl mx-auto py-16 border-y border-slate-100">
-        <h2 className="text-4xl font-bold text-veye-navy mb-8 tracking-tight italic">Beyond Content: Strategic Immersion</h2>
-        <div className="space-y-8 text-xl text-slate-600 leading-relaxed font-medium">
-          <p>
-            The goal is not to fill a feed but to dominate a frequency. By integrating media and audio intelligence into your growth infrastructure, you move beyond the noise of competitors.
-          </p>
-          <p>
-            You establish a clear, unwavering signal that penetrates the market, commands attention, and drives the strategic outcomes that define leadership.
-          </p>
-          <p className="text-veye-navy font-bold text-2xl italic">
-            This is media reimagined as high-fidelity growth architecture. This is the sound of a system working in perfect unison.
-          </p>
+      {/* SECTION_2: architecture-of-resonance */}
+      <section id="architecture-of-resonance" className="py-24 bg-slate-900 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-tr from-secondary to-transparent opacity-50"></div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
+           <h3 className="text-3xl md:text-5xl font-black mb-8">
+              <EditableText section="mediaIntelligence" field="section2Heading" />
+           </h3>
+           <p className="text-xl text-slate-300 leading-relaxed font-medium">
+              <EditableText section="mediaIntelligence" field="section2Paragraph" multiline />
+           </p>
         </div>
       </section>
 
-      {/* Call to Action */}
-      <div className="p-16 lg:p-32 bg-veye-navy text-white rounded-[4rem] text-center relative overflow-hidden mb-32 shadow-2xl">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-veye-blue/20 blur-[120px] rounded-full -z-0"></div>
-        <div className="relative z-10 max-w-4xl mx-auto">
-          <h2 className="text-4xl lg:text-6xl font-extrabold mb-10 tracking-tight italic">Start a Conversation</h2>
-          <p className="text-xl text-indigo-100 leading-relaxed font-medium mb-12">
-            We invite you to engage in a strategic dialogue about system intelligence and growth architecture. Let’s explore the possibilities together.
-          </p>
-          <Link 
-            to={Page.StartConversation} 
-            className="inline-flex items-center gap-3 px-12 py-6 bg-veye-blue hover:bg-veye-blue/90 text-white rounded-full font-bold transition-all text-xl shadow-2xl shadow-veye-blue/20"
-          >
-            Initiate Media Architecture Dialogue <ArrowRight size={24} />
-          </Link>
+      {/* SECTION_3: intelligence-dynamics */}
+      <section id="intelligence-dynamics" className="py-32 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-16">
+          <h3 className="text-3xl md:text-5xl font-black text-secondary mb-8">
+            <EditableText section="mediaIntelligence" field="section3Heading" />
+          </h3>
         </div>
-      </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+           {[1, 2, 3, 4].map((num) => (
+              <div key={num} className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 group hover:shadow-xl transition-all">
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-primary-500 mb-6 group-hover:bg-primary-500 group-hover:text-white transition-all shadow-sm">
+                  <Icon name={num === 1 ? 'Repeat' : num === 2 ? 'Eye' : num === 3 ? 'Globe' : 'Workflow'} size={20} />
+                </div>
+                <h4 className="text-lg font-bold text-secondary mb-3">
+                  <EditableText section="mediaIntelligence" field={`intel${num}Title`} />
+                </h4>
+                <p className="text-slate-500 text-sm leading-relaxed">
+                  <EditableText section="mediaIntelligence" field={`intel${num}Desc`} multiline />
+                </p>
+              </div>
+           ))}
+        </div>
+      </section>
+
+      {/* SECTION_4: strategic-immersion */}
+      <section id="strategic-immersion" className="py-32 bg-white overflow-hidden border-t border-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+              <div className="relative">
+                {loadingStates.mid ? (
+                  <div className="w-full aspect-video bg-slate-100 rounded-[3rem] animate-pulse flex items-center justify-center">
+                    <Icon name="Loader2" className="animate-spin text-slate-300" size={32} />
+                  </div>
+                ) : midImage ? (
+                  <div className="rounded-[3rem] overflow-hidden shadow-3xl border border-slate-100">
+                    <img src={midImage} alt="Global signal reach visualization" className="w-full h-auto object-cover" />
+                  </div>
+                ) : null}
+                <div className="absolute -top-12 -left-12 w-64 h-64 bg-accent/10 rounded-full blur-[100px] pointer-events-none"></div>
+              </div>
+
+              <div>
+                <h3 className="text-3xl md:text-5xl font-black text-secondary mb-12">
+                   <EditableText section="mediaIntelligence" field="section4Heading" />
+                </h3>
+                <p className="text-xl text-slate-500 leading-relaxed font-medium">
+                  <EditableText section="mediaIntelligence" field="section4Paragraph" multiline />
+                </p>
+              </div>
+           </div>
+        </div>
+      </section>
+
+      {/* SECTION_5: invitation */}
+      <section id="invitation" className="py-32 bg-slate-50 border-t border-slate-100 text-center">
+        <div className="max-w-4xl mx-auto px-4">
+           <h3 className="text-3xl md:text-6xl font-black text-secondary mb-8 tracking-tighter">
+             <EditableText section="mediaIntelligence" field="section5Heading" />
+           </h3>
+           <p className="text-xl md:text-2xl text-slate-500 font-medium leading-relaxed mb-12">
+             <EditableText section="mediaIntelligence" field="section5Paragraph" multiline />
+           </p>
+           
+           <div className="p-10 bg-white rounded-[2.5rem] shadow-xl border border-slate-100 max-w-2xl mx-auto">
+             <p className="text-lg font-bold text-primary-600 uppercase tracking-widest mb-10">
+                <EditableText section="mediaIntelligence" field="section5CtaLine" />
+             </p>
+             <button
+              onClick={() => onNavigate(View.AUDIT)}
+              className="px-12 py-6 rounded-2xl bg-secondary text-white font-extrabold text-2xl hover:bg-secondary-hover transition-all shadow-3xl shadow-secondary/20 flex items-center gap-4 mx-auto group"
+             >
+               Initialize Dialogue
+               <Icon name="ArrowRight" size={28} className="group-hover:translate-x-2 transition-transform" />
+             </button>
+           </div>
+        </div>
+      </section>
     </div>
   );
 };
