@@ -19,7 +19,7 @@ export default async function handler(req: any, res: any) {
   // --- DEBUG (safe, SMTP-focused) ---
   console.log('HOST:', req.headers.host);
   console.log('SMTP_HOST set:', Boolean(process.env.SMTP_HOST));
-  console.log('SMTP_USER:', process.env.SMTP_USER);
+
   console.log('CONTACT_FROM_EMAIL:', process.env.CONTACT_FROM_EMAIL);
   console.log('CONTACT_TO_EMAIL:', process.env.CONTACT_TO_EMAIL);
 
@@ -72,6 +72,11 @@ export default async function handler(req: any, res: any) {
       requireTLS: true,
     });
 
+    const intakeDetails = Object.entries(req.body || {})
+      .filter(([key]) => !['fullName', 'organization', 'email', 'operationalScale', 'growthBarrier', 'mandate', 'source', 'page'].includes(key))
+      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : String(value ?? '')}`)
+      .join('\n');
+
     const subject = `Start a Conversation — ${fullName} (${organization})`;
 
     await transporter.sendMail({
@@ -91,6 +96,9 @@ ${mandate}
 
 Source: ${source || 'unknown'}
 Page: ${page || 'unknown'}
+
+Additional intake details:
+${intakeDetails}
       `.trim(),
     });
 

@@ -1,6 +1,8 @@
 {
-  "framework": "vite",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
+    {
+      "source": "/((?!api/|robots\\.txt$|sitemap\\.xml$|.*\\..*$).*)",
+      "destination": "/index.html"
+    }
   ]
 }
